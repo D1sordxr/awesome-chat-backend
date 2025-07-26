@@ -50,8 +50,8 @@ func NewUserHandler(
 	authJWTUC authJWTUseCase,
 	getUserChatIDsUC getUserChatIDsUseCase,
 	getAllUsersUC getAllUsersUseCase,
-// createUC createUseCase,
-// getUC getUseCase,
+	// createUC createUseCase,
+	// getUC getUseCase,
 ) *Handler {
 	return &Handler{
 		registerUC:       registerUC,
