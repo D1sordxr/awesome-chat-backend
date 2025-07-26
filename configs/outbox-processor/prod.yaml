@@ -1,0 +1,12 @@
+storage:
+  host: "postgres"
+  user: "postgres"
+  password: "postgres"
+  port: 5432
+  database: "awesome-chat-db"
+  migration: true
+
+broker:
+  brokers:
+    - "kafka:9092"
+  topic: "awesome-chat-message"

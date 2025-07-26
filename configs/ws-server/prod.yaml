@@ -1,0 +1,7 @@
+app_env: "prod"
+
+http:
+  address: "localhost"
+  port: "8081"
+  timeout: 4s
+  idle_timeout: 30s
