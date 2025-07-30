@@ -7,5 +7,5 @@ type EntityCreator interface {
 		userID string,
 		chatID string,
 		text string,
-	) entity.Message
+	) entity.OldMessage
 }

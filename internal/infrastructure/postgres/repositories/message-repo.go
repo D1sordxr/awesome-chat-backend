@@ -14,7 +14,7 @@ func NewMessageRepo(e ports.ExecutorManager) *MessageRepo {
 	return &MessageRepo{e: e}
 }
 
-func (r *MessageRepo) Save(ctx context.Context, message entity.Message) error {
+func (r *MessageRepo) Save(ctx context.Context, message entity.OldMessage) error {
 	executor := r.e.GetExecutor(ctx)
 	query := `
 		INSERT INTO messages (

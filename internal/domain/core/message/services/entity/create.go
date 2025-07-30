@@ -8,8 +8,8 @@ func (*Create) Do(
 	userID string,
 	chatID string,
 	text string,
-) entity.Message {
-	return entity.Message{
+) entity.OldMessage {
+	return entity.OldMessage{
 		UserID:  userID,
 		ChatID:  chatID,
 		Content: text,

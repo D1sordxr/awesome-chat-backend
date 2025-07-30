@@ -2,22 +2,20 @@ package ports
 
 import (
 	"awesome-chat/internal/domain/core/chat/entity"
+	"awesome-chat/internal/domain/core/chat/vo"
+	userVO "awesome-chat/internal/domain/core/user/vo"
 	"context"
 
 	"github.com/google/uuid"
 )
 
 type CreateWithMembersStore interface {
-	CreateStore
-	AddMemberStore
+	CreateChat(ctx context.Context, chatID vo.ChatID, chatName string) error
+	AddMembers(ctx context.Context, chatID vo.ChatID, memberIDs userVO.UserIDs) error
 }
 
 type GetAllMessagesStore interface {
 	Execute(ctx context.Context, id uuid.UUID) ([]entity.MessagePreview, error)
-}
-
-type CreateStore interface {
-	Execute(ctx context.Context, id uuid.UUID, chatName string) error
 }
 
 type AddMemberStore interface {

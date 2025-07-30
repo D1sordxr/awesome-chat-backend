@@ -71,7 +71,7 @@ func (h *Hub) UnregisterClient(clientID string) {
 	delete(h.clients, clientID)
 }
 
-func (h *Hub) Broadcast(ctx context.Context, message entity.Message, payload []byte) error {
+func (h *Hub) Broadcast(ctx context.Context, message entity.OldMessage, payload []byte) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 

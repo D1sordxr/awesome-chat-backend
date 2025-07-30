@@ -7,6 +7,7 @@ import (
 	"awesome-chat/internal/application/chat/useCases/getUserChatPreview"
 	messageSendFast "awesome-chat/internal/application/message/useCases/fast"
 	messageGet "awesome-chat/internal/application/message/useCases/get"
+	"awesome-chat/internal/application/message/useCases/getForChatWithFilter"
 	messageSave "awesome-chat/internal/application/message/useCases/save"
 	messageSend "awesome-chat/internal/application/message/useCases/send"
 	"awesome-chat/internal/application/user/useCases/authJWT"
@@ -64,6 +65,7 @@ func NewApp(ctx context.Context) *App {
 	userGetStore := userStore.NewGetStore(txManager)
 	userProviderStore := userStore.NewProviderStore(txManager)
 	userGetChatIDsStore := userStore.NewGetChatIDsStore(txManager)
+	userValidatorStore := userStore.NewValidatorStore(txManager)
 
 	userRegisterUC := register.NewUserRegisterUseCase(log, userRepo)
 	userLoginUC := login.NewUserLoginUseCase(log, userProviderStore, userTokenCreator)
@@ -78,23 +80,22 @@ func NewApp(ctx context.Context) *App {
 		userGetChatIDsUC,
 		userGetAllUC,
 	)
-	userAuthHandler := userHandler.NewAuth(log, userAuthJwtUC)
 
-	// TODO: validateUserStore := user.NewValidateStore(txManager)
 	chatCreateWithMembersStore := chatStore.NewCreateWithMembersStore(txManager)
 	chatValidatorStore := chatStore.NewValidatorStore(txManager)
 	chatPreviewStore := chatStore.NewGetUserChatPreviewStore(txManager)
 	chatGetAllMessagesStore := chatStore.NewGetAllMessagesStore(txManager)
 
 	chatCreateUC := chatCreate.NewChatCreateUseCase(
+		log,
 		txManager,
 		chatCreateWithMembersStore,
-		userGetStore, // TODO: change getUser -> validate userStore
+		userValidatorStore,
 	)
 	chatAddMemberUC := chatAddMember.NewChatAddMemberUseCase(
 		chatCreateWithMembersStore,
 		chatValidatorStore,
-		userGetStore,
+		userValidatorStore,
 	)
 	chatPreviewUC := getUserChatPreview.NewChatGetUserChatPreviewUseCase(
 		log,
@@ -112,10 +113,11 @@ func NewApp(ctx context.Context) *App {
 		chatGetAllMessagesUC,
 	)
 
+	outboxRepo := repos.NewOutboxRepo(txManager)
+	messageRepo := repos.NewMessageRepo(txManager)
 	messagePublisher := redis.NewPublisher(&cfg.MessagePublisher)
 	messageGetStore := messageStore.NewGetStore(txManager)
-	messageRepo := repos.NewMessageRepo(txManager)
-	outboxRepo := repos.NewOutboxRepo(txManager)
+	messageGetForChatWithFilterStore := messageStore.NewGetForChatWithFilter(txManager)
 
 	messageEntityCreator := new(msgEntity.Create)
 	outboxEntityCreator := new(outboxEntity.Create)
@@ -138,6 +140,10 @@ func NewApp(ctx context.Context) *App {
 		messageEntityCreator,
 		cfg.WSServerAPI.BroadcastURL,
 	)
+	messageGetForChatWithFilter := getForChatWithFilter.NewMessageGetForChatWithFilterUseCase(
+		log,
+		messageGetForChatWithFilterStore,
+	)
 
 	messageHandlers := messageHandler.NewMessageHandler(
 		messageGetUC,
@@ -145,6 +151,7 @@ func NewApp(ctx context.Context) *App {
 		messageSendUC,
 		messageSendFastUC,
 		messageSendSyncUC,
+		messageGetForChatWithFilter,
 	)
 
 	srv := fiberHttp.NewServer(
@@ -153,7 +160,6 @@ func NewApp(ctx context.Context) *App {
 		chatHandlers,
 		userHandlers,
 		messageHandlers,
-		userAuthHandler,
 	)
 
 	components := setupComponents(

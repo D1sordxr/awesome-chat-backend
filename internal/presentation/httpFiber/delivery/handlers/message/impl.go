@@ -24,14 +24,18 @@ type (
 	sendSyncUseCase interface {
 		Execute(ctx context.Context, req dto.SendSyncRequest, raw []byte) error
 	}
+	getForChatWithFilterUseCase interface {
+		Execute(ctx context.Context, req dto.GetForChatWithFilterRequest) (dto.GetForChatWithFilterResponse, error)
+	}
 )
 
 type Handler struct {
-	getMessagesUC getMessagesUseCase
-	saveUC        saveUseCase
-	sendUC        sendUseCase
-	sendFastUC    sendFastUseCase
-	sendSyncUC    sendSyncUseCase
+	getMessagesUC          getMessagesUseCase
+	saveUC                 saveUseCase
+	sendUC                 sendUseCase
+	sendFastUC             sendFastUseCase
+	sendSyncUC             sendSyncUseCase
+	getForChatWithFilterUC getForChatWithFilterUseCase
 }
 
 func NewMessageHandler(
@@ -40,13 +44,15 @@ func NewMessageHandler(
 	sendUC sendUseCase,
 	sendFastUC sendFastUseCase,
 	sendSyncUC sendSyncUseCase,
+	getForChatWithFilterUC getForChatWithFilterUseCase,
 ) *Handler {
 	return &Handler{
-		sendSyncUC:    sendSyncUC,
-		saveUC:        saveUC,
-		sendUC:        sendUC,
-		sendFastUC:    sendFastUC,
-		getMessagesUC: getMessagesUC,
+		sendSyncUC:             sendSyncUC,
+		saveUC:                 saveUC,
+		sendUC:                 sendUC,
+		sendFastUC:             sendFastUC,
+		getMessagesUC:          getMessagesUC,
+		getForChatWithFilterUC: getForChatWithFilterUC,
 	}
 }
 
@@ -111,12 +117,54 @@ func (h *Handler) GetMessages(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "chat_id is required")
 	}
 
-	messages, err := h.getMessagesUC.Execute(ctx.Context(), dto.GetRequest{ChatID: chatID})
+	limit := ctx.QueryInt("limit", 100)
+
+	offset := ctx.QueryInt("offset", 0)
+
+	cursor := ctx.Query("cursor", "")
+
+	messages, err := h.getMessagesUC.Execute(ctx.Context(), dto.GetRequest{
+		ChatID: chatID,
+		Limit:  limit,
+		Offset: offset,
+		Cursor: cursor,
+	})
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
 	return ctx.JSON(messages)
+}
+
+func (h *Handler) getForChatWithFilter(ctx *fiber.Ctx) error {
+	chatID := ctx.Query("chat_id")
+	if chatID == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "chat_id is required")
+	}
+
+	limit := ctx.QueryInt("limit", 100)
+
+	offset := ctx.QueryInt("offset", 0)
+
+	cursor := ctx.QueryInt("cursor", 0)
+
+	resp, err := h.getForChatWithFilterUC.Execute(ctx.Context(), dto.GetForChatWithFilterRequest{
+		ChatID: chatID,
+		Limit:  limit,
+		Offset: offset,
+		Cursor: cursor,
+	})
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Invalid request format",
+			"details": err.Error(),
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"messages": resp.AllMessages,
+	})
+
 }
 
 func (h *Handler) RegisterRoutes(router fiber.Router) {
@@ -125,4 +173,5 @@ func (h *Handler) RegisterRoutes(router fiber.Router) {
 	router.Post("/message/send-fast", h.SendFast)
 	router.Post("/message/send-sync", h.SendSync)
 	router.Get("/message", h.GetMessages)
+	router.Get("/message/get-for-chat-with-filter", h.SendFast)
 }

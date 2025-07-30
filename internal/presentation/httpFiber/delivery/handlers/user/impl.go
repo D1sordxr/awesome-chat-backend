@@ -27,11 +27,6 @@ type (
 	getAllUsersUseCase interface {
 		Execute(ctx context.Context) (dto.GetAllUsersResponse, error)
 	}
-
-	// V1 useCases
-	//createUseCase interface {
-	//	SetupChatPreviews(ctx context.Context, req dto.CreateUserRequest) (dto.UserResponse, error)
-	//}
 )
 
 type Handler struct {
@@ -40,8 +35,6 @@ type Handler struct {
 	authJWTUC        authJWTUseCase
 	getUserChatIDsUC getUserChatIDsUseCase
 	getAllUsersUC    getAllUsersUseCase
-
-	//createUC createUseCase
 }
 
 func NewUserHandler(
@@ -50,8 +43,6 @@ func NewUserHandler(
 	authJWTUC authJWTUseCase,
 	getUserChatIDsUC getUserChatIDsUseCase,
 	getAllUsersUC getAllUsersUseCase,
-	// createUC createUseCase,
-	// getUC getUseCase,
 ) *Handler {
 	return &Handler{
 		registerUC:       registerUC,
@@ -59,8 +50,6 @@ func NewUserHandler(
 		authJWTUC:        authJWTUC,
 		getUserChatIDsUC: getUserChatIDsUC,
 		getAllUsersUC:    getAllUsersUC,
-		//createUC:   createUC,
-		//getUC:      getUC,
 	}
 }
 
@@ -224,44 +213,11 @@ func (h *Handler) getAllUsers(ctx *fiber.Ctx) error {
 	})
 }
 
-//func (h *Handler) CreateUser(ctx *fiber.Ctx) error {
-//	var req dto.CreateUserRequest
-//	if err := ctx.BodyParser(&req); err != nil {
-//		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-//	}
-//
-//	user, err := h.createUC.SetupChatPreviews(ctx.Context(), req)
-//	if err != nil {
-//		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-//	}
-//
-//	return ctx.Status(fiber.StatusCreated).JSON(user)
-//}
-//
-//func (h *Handler) GetUser(ctx *fiber.Ctx) error {
-//	userID := ctx.Params("id")
-//	if userID == "" {
-//		return fiber.NewError(fiber.StatusBadRequest, "user id is required")
-//	}
-//
-//	user, err := h.getUC.SetupChatPreviews(ctx.Context(), userID)
-//	if err != nil {
-//		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-//	}
-//
-//	return ctx.JSON(user)
-//}
-
 func (h *Handler) RegisterRoutes(router fiber.Router) {
-	// V2
 	router.Post("/user/register", h.register)
 	router.Post("/user/login", h.login)
 	router.Get("/user/logout", h.logout)
 	router.Get("/user/auth-jwt", h.authJWT)
 	router.Get("/user/chat-ids/:id", h.getChatIDs)
 	router.Get("/user/get-all", h.getAllUsers)
-
-	// V1
-	//router.Post("/user", h.CreateUser)
-	//router.Get("/user/:id", h.GetUser)
 }

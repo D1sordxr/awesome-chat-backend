@@ -23,7 +23,7 @@ func NewUseCase(
 func (uc *UseCase) Broadcast(ctx context.Context, message brokerMsg.Message) error {
 	// TODO: save to processed msg by message.key with tx if needed
 
-	var msg entity.Message
+	var msg entity.OldMessage
 	err := json.Unmarshal(message.Value, &msg)
 	if err != nil {
 		return err

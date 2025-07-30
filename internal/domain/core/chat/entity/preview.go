@@ -15,6 +15,7 @@ type (
 		Participants []Participant  `json:"participants"`
 	}
 	MessagePreview struct {
+		ID        int       `json:"id"`
 		SenderID  uuid.UUID `json:"sender_id"`
 		Text      string    `json:"text"`
 		Timestamp time.Time `json:"timestamp"`

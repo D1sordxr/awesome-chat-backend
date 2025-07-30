@@ -8,7 +8,7 @@ import (
 )
 
 type Broadcaster interface {
-	Broadcast(ctx context.Context, message entity.Message, payload []byte) error
+	Broadcast(ctx context.Context, message entity.OldMessage, payload []byte) error
 }
 
 type ConnManager interface {

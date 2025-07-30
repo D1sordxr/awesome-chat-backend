@@ -22,4 +22,8 @@ type SendSyncRequest struct {
 
 type GetRequest struct {
 	ChatID string `json:"chat_id"`
+	Limit  int    `json:"limit,omitempty"`  // 100
+	Offset int    `json:"offset,omitempty"` // pagination
+	// or
+	Cursor string `json:"cursor,omitempty"` // last message ID (cursor pagination)
 }

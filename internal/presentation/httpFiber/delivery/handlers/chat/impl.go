@@ -44,15 +44,21 @@ func NewChatHandler(
 	}
 }
 
-func (h *Handler) CreateChatWithMembers(ctx *fiber.Ctx) error {
+func (h *Handler) createChatWithMembers(ctx *fiber.Ctx) error {
 	var req dto.CreateChatRequest
 	if err := ctx.BodyParser(&req); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "internal server error",
+			"details": err.Error(),
+		})
 	}
 
 	chat, err := h.createUC.Execute(ctx.Context(), req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "internal server error",
+			"details": err.Error(),
+		})
 	}
 
 	return ctx.Status(fiber.StatusCreated).JSON(chat)
@@ -121,7 +127,7 @@ func (h *Handler) getChatAllMessages(ctx *fiber.Ctx) error {
 }
 
 func (h *Handler) RegisterRoutes(router fiber.Router) {
-	router.Post("/chat", h.CreateChatWithMembers)
+	router.Post("/chat", h.createChatWithMembers)
 	router.Post("/chat/add-user", h.AddUser)
 	router.Get("/chat/:id", h.getUserChatPreview)
 	router.Get("/chat/messages/:chat_id", h.getChatAllMessages)

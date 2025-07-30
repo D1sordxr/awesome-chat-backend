@@ -4,6 +4,7 @@ import (
 	"awesome-chat/internal/application/chat/dto"
 	"awesome-chat/internal/domain/core/chat/ports"
 	userPorts "awesome-chat/internal/domain/core/user/ports"
+	"awesome-chat/internal/domain/core/user/vo"
 	"context"
 	"fmt"
 
@@ -14,13 +15,13 @@ import (
 type ChatAddMemberUseCase struct {
 	chatStore     ports.AddMemberStore
 	chatValidator ports.ValidateStore
-	userValidator userPorts.UserGetAllStore
+	userValidator userPorts.UserValidatorStore
 }
 
 func NewChatAddMemberUseCase(
 	chatStore ports.AddMemberStore,
 	chatValidator ports.ValidateStore,
-	userValidator userPorts.UserGetAllStore,
+	userValidator userPorts.UserValidatorStore,
 ) *ChatAddMemberUseCase {
 	return &ChatAddMemberUseCase{
 		chatStore:     chatStore,
@@ -59,7 +60,7 @@ func (uc *ChatAddMemberUseCase) Execute(ctx context.Context, req dto.AddUserRequ
 	})
 
 	g.Go(func() error {
-		if _, err = uc.userValidator.GetAll(groupCtx); err != nil { // TODO change
+		if err = uc.userValidator.ValidateByID(groupCtx, vo.UserID(userID)); err != nil {
 			return fmt.Errorf("user validation failed: %w", err)
 		}
 		return nil
