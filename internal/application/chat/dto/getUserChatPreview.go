@@ -15,8 +15,8 @@ type (
 		Participants []Participant `json:"participants,omitempty"`
 	}
 	Message struct {
-		Text      string `json:"text"`
-		SenderID  string `json:"sender_id"`
+		UserID    string `json:"user_id"`
+		Content   string `json:"content"`
 		Timestamp string `json:"timestamp"`
 	}
 	Participant struct {

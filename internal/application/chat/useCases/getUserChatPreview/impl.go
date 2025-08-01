@@ -89,8 +89,8 @@ func (uc *ChatGetUserChatPreviewUseCase) Execute(
 
 		if preview.LastMessage.Text != "" {
 			chatPreviewResp.LastMessage = dto.Message{
-				Text:      preview.LastMessage.Text,
-				SenderID:  preview.LastMessage.SenderID.String(),
+				Content:   preview.LastMessage.Text,
+				UserID:    preview.LastMessage.SenderID.String(),
 				Timestamp: preview.LastMessage.Timestamp.Format(time.RFC3339),
 			}
 		}

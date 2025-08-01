@@ -10,6 +10,8 @@ type (
 	}
 	GetForChatWithFilterResponse struct {
 		AllMessages []FilteredMessage `json:"messages"`
+		Count       int               `json:"count"`
+		LastCursor  int               `json:"last_cursor"`
 	}
 	FilteredMessage struct {
 		ID        int    `json:"id"`

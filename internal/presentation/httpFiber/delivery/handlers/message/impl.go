@@ -156,15 +156,16 @@ func (h *Handler) getForChatWithFilter(ctx *fiber.Ctx) error {
 	})
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Invalid request format",
+			"error":   "Failed to get messages",
 			"details": err.Error(),
 		})
 	}
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
-		"messages": resp.AllMessages,
+		"messages":    resp.AllMessages,
+		"count":       resp.Count,
+		"last_cursor": resp.LastCursor,
 	})
-
 }
 
 func (h *Handler) RegisterRoutes(router fiber.Router) {
@@ -173,5 +174,5 @@ func (h *Handler) RegisterRoutes(router fiber.Router) {
 	router.Post("/message/send-fast", h.SendFast)
 	router.Post("/message/send-sync", h.SendSync)
 	router.Get("/message", h.GetMessages)
-	router.Get("/message/get-for-chat-with-filter", h.SendFast)
+	router.Get("/message/filter", h.getForChatWithFilter)
 }

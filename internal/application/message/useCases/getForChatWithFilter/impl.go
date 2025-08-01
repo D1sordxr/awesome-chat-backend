@@ -78,7 +78,20 @@ func (uc *MessageGetForChatWithFilterUseCase) Execute(
 		filteredMessage = append(filteredMessage, msg)
 	}
 
+	lastCursor := 0
+	if len(filteredMessage) > 0 {
+		lastCursor = filteredMessage[len(filteredMessage)-1].ID
+	}
+
+	if len(messages) == 0 {
+		uc.log.Warn("No messages found", withFields("filter", filter)...)
+	}
+
+	uc.log.Info("Successfully got messages with filter", withFields("filter", filter)...)
+
 	return dto.GetForChatWithFilterResponse{
 		AllMessages: filteredMessage,
+		Count:       len(messages),
+		LastCursor:  lastCursor,
 	}, nil
 }

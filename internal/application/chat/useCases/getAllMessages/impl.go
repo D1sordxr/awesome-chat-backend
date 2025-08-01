@@ -47,8 +47,8 @@ func (uc *ChatGetAllMessagesUseCase) Execute(ctx context.Context, chatID dto.Cha
 	msgResp := make(dto.AllMessages, 0, len(messages))
 	for _, msg := range messages {
 		msgResp = append(msgResp, dto.Message{
-			Text:      msg.Text,
-			SenderID:  msg.SenderID.String(),
+			Content:   msg.Text,
+			UserID:    msg.SenderID.String(),
 			Timestamp: msg.Timestamp.String(),
 		})
 	}
