@@ -67,5 +67,6 @@ func (uc *UserLoginUseCase) Execute(
 	uc.log.Info("Successfully logged in", withFields()...)
 	resp.Token = token
 	resp.Username = user.Username
+	resp.UserID = user.UserID.String()
 	return resp, nil
 }

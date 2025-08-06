@@ -18,8 +18,10 @@ type Client struct {
 	id    string
 	chats []string
 
-	socket *websocket.Conn
-	send   chan []byte
+	socket       *websocket.Conn
+	send         chan []byte
+	opChan       chan<- Operation
+	respChanPool sync.Pool
 
 	mu        sync.Mutex
 	isClosed  atomic.Bool
@@ -30,6 +32,7 @@ func NewClient(
 	log ports.Logger,
 	socket *websocket.Conn,
 	id string,
+	opChan chan Operation,
 	chats ...string,
 ) *Client {
 	return &Client{
@@ -37,7 +40,13 @@ func NewClient(
 		id:     id,
 		socket: socket,
 		send:   make(chan []byte, 256),
+		opChan: opChan,
 		chats:  chats,
+		respChanPool: sync.Pool{
+			New: func() interface{} {
+				return make(chan OperationResponse, 1)
+			},
+		},
 	}
 }
 
@@ -135,27 +144,54 @@ func (c *Client) readPump(ctx context.Context) error {
 				return err
 			}
 
-			c.log.Info("message received from client",
+			c.log.Info("operation message received from client",
 				"client_id", c.id,
 				"content_length", len(message))
 
-			msg := Message{
-				UserID:   c.id,
-				Content:  string(message),
-				ServerIP: LocalIp(),
-				SenderIP: c.socket.RemoteAddr().String(),
-			}
+			if err = func() error {
+				respChan := c.respChanPool.Get().(chan OperationResponse)
+				defer func() {
+					select {
+					case <-respChan:
+					default:
+					}
+					c.respChanPool.Put(respChan)
+				}()
 
-			for _, chat := range c.chats {
-				msg.ChatID = chat
+				opCtx, opCancel := context.WithTimeout(ctx, 5*time.Second)
+				defer opCancel()
+
+				op := Operation{
+					ClientID: c.id,
+					Data:     message,
+					Retries:  0,
+					RespChan: respChan,
+					Ctx:      opCtx,
+				}
+
 				select {
-				case c.send <- msg.ToJSON():
-					c.log.Debug("message forwarded to processing",
-						"client_id", c.id,
-						"chat_id", chat)
+				case c.opChan <- op:
 				case <-ctx.Done():
 					return nil
+				case <-opCtx.Done():
+					return opCtx.Err()
 				}
+
+				select {
+				case resp := <-respChan:
+					if opCtx.Err() != nil {
+						return opCtx.Err()
+					}
+					c.send <- resp.ToJSON()
+				case <-ctx.Done():
+					return nil
+				case <-opCtx.Done():
+					return opCtx.Err()
+				}
+
+				return nil
+			}(); err != nil {
+				c.log.Error("operation error", "client_id", c.id, "error", err)
 			}
 		}
 	}
@@ -215,7 +251,7 @@ func (c *Client) writePump(ctx context.Context) error {
 				c.log.Error("failed to send ping", "client_id", c.id, "error", err)
 				return err
 			}
-			c.log.Debug("ping sent", "client_id", c.id)
+			// c.log.Debug("ping sent", "client_id", c.id)
 		}
 	}
 }

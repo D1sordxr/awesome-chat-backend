@@ -1,10 +1,13 @@
 package wsServer
 
 import (
+	"awesome-chat/internal/application/message/useCases/broadcast"
 	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/infrastructure/config/apps/wsServer"
 	"awesome-chat/internal/infrastructure/logger"
 	"awesome-chat/internal/infrastructure/ws/chathub"
+	"awesome-chat/internal/infrastructure/ws/chathub/transport"
+	"awesome-chat/internal/infrastructure/ws/chathub/transport/sendMessage"
 	"awesome-chat/internal/presentation/httpGin/delivery/handlers/ws"
 	"awesome-chat/internal/presentation/httpGin/middleware"
 	"context"
@@ -30,21 +33,28 @@ func NewApp(_ context.Context) *App {
 
 	log := logger.NewLogger()
 
-	wsClientManager := chathub.NewClientManager(log)
+	//wsClientManager := chathub.NewClientManager(log)
+	wsClientStore := chathub.NewInMemoryClientStoreImpl()
+	wsClientManager := chathub.NewClientManagerV2(log, wsClientStore)
 
-	healthHandler := ws.NewHealthHandler()
+	messageBroadcastWithPubUC := broadcast.NewMessageBroadcastWithPubImpl(log, wsClientManager)
+	wsSendMsgOpHandler := sendMessage.New(messageBroadcastWithPubUC)
+	wsOpHandler := transport.NewOperationHandler(wsSendMsgOpHandler)
+	wsClientManager.MustOperationHandler(wsOpHandler)
+
+	healthHttpHandler := ws.NewHealthHandler()
 
 	authMid := middleware.NewAuthAsClient()
-	upgradeHandler := ws.NewUpgradeHandler(wsClientManager, authMid)
+	upgradeHttpHandler := ws.NewUpgradeHandler(wsClientManager, authMid)
 
-	broadcastHandler := ws.NewBroadcastHandler(wsClientManager)
+	broadcastHttpHandler := ws.NewBroadcastHandler(wsClientManager)
 
 	server := ginServer.NewServer(
 		log,
 		&cfg.HTTPServer,
-		upgradeHandler,
-		broadcastHandler,
-		healthHandler,
+		upgradeHttpHandler,
+		broadcastHttpHandler,
+		healthHttpHandler,
 	)
 
 	components := setupComponents(

@@ -5,23 +5,22 @@ import (
 	chathubErrors "awesome-chat/internal/infrastructure/ws/chathub/errors"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"sync/atomic"
 )
 
-type ClientManager struct {
+type ClientManagerV2 struct {
 	log ports.Logger
 
-	chatClients map[string]map[string]*Client
+	clientStore ClientStore
 	upgrader    *websocket.Upgrader
 
-	opChan     chan Operation
-	broadcast  chan Message
-	register   chan *Client
-	unregister chan *Client
-	errChan    chan error
+	broadcast chan Message
+	opChan    chan Operation
+	errChan   chan error
 
 	opHandler operationHandler
 
@@ -30,12 +29,13 @@ type ClientManager struct {
 	isClosed atomic.Bool
 }
 
-func NewClientManager(
+func NewClientManagerV2(
 	log ports.Logger,
-) *ClientManager {
-	return &ClientManager{
+	clientStore ClientStore,
+) *ClientManagerV2 {
+	return &ClientManagerV2{
 		log:         log,
-		chatClients: make(map[string]map[string]*Client),
+		clientStore: clientStore,
 		upgrader: &websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -43,19 +43,17 @@ func NewClientManager(
 				return true
 			},
 		},
-		opChan:     make(chan Operation, chanBuff),
-		broadcast:  make(chan Message, chanBuff),
-		register:   make(chan *Client, chanBuff),
-		unregister: make(chan *Client, chanBuff),
-		errChan:    make(chan error, chanBuff),
+		opChan:    make(chan Operation, chanBuff),
+		broadcast: make(chan Message, chanBuff),
+		errChan:   make(chan error, chanBuff),
 	}
 }
 
-func (m *ClientManager) MustOperationHandler(handler operationHandler) {
+func (m *ClientManagerV2) MustOperationHandler(handler operationHandler) {
 	m.opHandler = handler
 }
 
-func (m *ClientManager) HandleWebSocket(
+func (m *ClientManagerV2) HandleWebSocket(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -78,60 +76,29 @@ func (m *ClientManager) HandleWebSocket(
 	client := NewClient(m.log, socket, userID, m.opChan, chatIDs...)
 	m.log.Info("new client created", "client_id", client.id)
 
-	select {
-	case m.register <- client:
-		m.log.Info("registering client in manager", "client_id", client.id)
-		go func() {
-			m.log.Debug("starting client goroutine", "client_id", client.id)
-			if err = client.Run(context.WithoutCancel(ctx)); err != nil {
-				m.log.Error("client run error", "client_id", client.id, "error", err.Error())
-				m.errChan <- err
+	go func() {
+		m.clientStore.Add(client)
+		defer func() {
+			if rr := recover(); rr != nil {
+				m.errChan <- fmt.Errorf("panic: %v", rr)
 			}
-			m.log.Info("client finished, unregistering", "client_id", client.id)
-			m.unregister <- client
+			if clientErr := client.Close(); clientErr != nil {
+				m.errChan <- clientErr
+			}
+			m.clientStore.Remove(client)
 		}()
-		return nil
-	case <-ctx.Done():
-		m.log.Warn("context canceled before client registration", "client_id", client.id)
-		_ = socket.Close()
-		return ctx.Err()
-	}
-}
 
-func (m *ClientManager) registerClient(client *Client) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	for _, chat := range client.chats {
-		if _, ok := m.chatClients[chat]; !ok {
-			m.chatClients[chat] = make(map[string]*Client)
+		if err = client.Run(context.WithoutCancel(ctx)); err != nil {
+			m.errChan <- fmt.Errorf("client error: %w", err)
 		}
-		m.chatClients[chat][client.id] = client
-		m.log.Debug("client registered successfully", "client_id", client.id, "chat_id", chat)
-	}
+	}()
+
+	return nil
 }
 
-func (m *ClientManager) unregisterClient(client *Client) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	for _, chat := range client.chats {
-		if clients, ok := m.chatClients[chat]; ok {
-			delete(clients, client.id)
-			if len(clients) == 0 {
-				delete(m.chatClients, chat)
-			}
-			m.log.Debug("client unregistered successfully", "client_id", client.id, "chat_id", chat)
-		}
-	}
-}
-
-func (m *ClientManager) broadcastToClients(message Message) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
+func (m *ClientManagerV2) broadcastToClients(message Message) {
 	msg := message.ToJSON()
-	clients, ok := m.chatClients[message.ChatID]
+	clients, ok := m.clientStore.GetClients(message.ChatID)
 	if !ok {
 		m.log.Warn("no clients found for chat", "chat_id", message.ChatID)
 		return
@@ -140,7 +107,8 @@ func (m *ClientManager) broadcastToClients(message Message) {
 	m.log.Info("broadcasting message to chat",
 		"chat_id", message.ChatID,
 		"sender_id", message.UserID,
-		"content_length", len(message.Content))
+		"content_length", len(message.Content),
+	)
 
 	for id, client := range clients {
 		if client.isClosed.Load() {
@@ -163,24 +131,23 @@ func (m *ClientManager) broadcastToClients(message Message) {
 				"client_id", id,
 				"buffer_size", cap(client.send))
 			go func(c *Client) {
-				m.unregister <- c
 				_ = c.Close()
 			}(client)
 		}
 	}
 }
 
-func (m *ClientManager) Broadcast(ctx context.Context, message Message) error {
+func (m *ClientManagerV2) Broadcast(ctx context.Context, message Message) error {
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	case m.broadcast <- message:
-		m.log.Info("client broadcast", "message", message.ToJSON())
+		m.log.Info("client broadcast", "chat_id", message.ChatID)
 		return nil
 	}
 }
 
-func (m *ClientManager) Start(ctx context.Context) error {
+func (m *ClientManagerV2) Start(ctx context.Context) error {
 	m.wg.Add(1)
 	defer m.wg.Done()
 
@@ -190,16 +157,17 @@ func (m *ClientManager) Start(ctx context.Context) error {
 			return nil
 		case err := <-m.errChan:
 			if !m.isClosed.Load() {
-				m.log.Error("client error", "error", err.Error())
+				m.log.Error("ClientManager received error", "error", err.Error())
 			}
-		case client := <-m.register:
-			m.registerClient(client)
-		case client := <-m.unregister:
-			m.unregisterClient(client)
-			_ = client.Close()
 		case message := <-m.broadcast:
-			m.broadcastToClients(message)
+			if !m.isClosed.Load() {
+				m.broadcastToClients(message)
+			}
 		case op := <-m.opChan:
+			if !m.isClosed.Load() {
+				op.RespChan <- OperationResponse{Error: errors.New("client manager is shutting down")}
+				continue
+			}
 			opResp := m.opHandler.Handle(op.Ctx, op.Data)
 			if opResp.Error != nil {
 				m.log.Error("operation error",
@@ -238,13 +206,11 @@ func (m *ClientManager) Start(ctx context.Context) error {
 	}
 }
 
-func (m *ClientManager) Shutdown(ctx context.Context) error {
+func (m *ClientManagerV2) Shutdown(ctx context.Context) error {
 	if m.isClosed.Swap(true) {
 		return nil
 	}
 
-	close(m.register)
-	close(m.unregister)
 	close(m.opChan)
 	close(m.broadcast)
 	close(m.errChan)

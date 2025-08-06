@@ -129,6 +129,7 @@ func (h *Handler) login(ctx *fiber.Ctx) error {
 	})
 
 	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"user_id":  resp.UserID,
 		"username": resp.Username,
 		"token":    resp.Token,
 		"message":  "Login successful",
