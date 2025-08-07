@@ -1,9 +1,10 @@
-package transport
+package consts
 
 type OperationType string
 
 const (
 	SendMessage OperationType = "send_message"
+	Broadcast   OperationType = "broadcast"
 	// GetMessages etc
 )
 

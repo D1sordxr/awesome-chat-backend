@@ -2,6 +2,7 @@ package chathub
 
 import (
 	"awesome-chat/internal/domain/app/ports"
+	"awesome-chat/internal/infrastructure/ws/chathub/consts"
 	"context"
 	"net"
 	"sync"
@@ -61,7 +62,7 @@ func (c *Client) Run(ctx context.Context) error {
 	c.socket.SetPongHandler(func(string) error {
 		c.mu.Lock()
 		defer c.mu.Unlock()
-		err := c.socket.SetReadDeadline(time.Now().Add(pongWait))
+		err := c.socket.SetReadDeadline(time.Now().Add(consts.PongWait))
 		if err != nil {
 			c.log.Error("failed to set read deadline", "client_id", c.id, "error", err)
 		}
@@ -104,7 +105,7 @@ func (c *Client) Close() error {
 		c.log.Debug("send channel closed", "client_id", c.id)
 
 		closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
-		err = c.socket.WriteControl(websocket.CloseMessage, closeMsg, time.Now().Add(writeWait))
+		err = c.socket.WriteControl(websocket.CloseMessage, closeMsg, time.Now().Add(consts.WriteWait))
 		if err != nil {
 			c.log.Error("failed to send close message", "client_id", c.id, "error", err)
 		}
@@ -124,8 +125,8 @@ func (c *Client) readPump(ctx context.Context) error {
 	}()
 
 	c.mu.Lock()
-	c.socket.SetReadLimit(maxMessageSize)
-	_ = c.socket.SetReadDeadline(time.Now().Add(pongWait))
+	c.socket.SetReadLimit(consts.MaxMessageSize)
+	_ = c.socket.SetReadDeadline(time.Now().Add(consts.PongWait))
 	c.mu.Unlock()
 
 	for {
@@ -146,7 +147,8 @@ func (c *Client) readPump(ctx context.Context) error {
 
 			c.log.Info("operation message received from client",
 				"client_id", c.id,
-				"content_length", len(message))
+				"content_length", len(message),
+			)
 
 			if err = func() error {
 				respChan := c.respChanPool.Get().(chan OperationResponse)
@@ -199,7 +201,7 @@ func (c *Client) readPump(ctx context.Context) error {
 
 func (c *Client) writePump(ctx context.Context) error {
 	c.log.Debug("starting write pump", "client_id", c.id)
-	ticker := time.NewTicker(pingPeriod)
+	ticker := time.NewTicker(consts.PingPeriod)
 	defer func() {
 		ticker.Stop()
 		c.log.Debug("write pump exiting", "client_id", c.id)
@@ -222,7 +224,7 @@ func (c *Client) writePump(ctx context.Context) error {
 				"client_id", c.id,
 				"content_length", len(message))
 
-			err := c.socket.SetWriteDeadline(time.Now().Add(writeWait))
+			err := c.socket.SetWriteDeadline(time.Now().Add(consts.WriteWait))
 			if err != nil {
 				c.mu.Unlock()
 				c.log.Error("failed to set write deadline", "client_id", c.id, "error", err)
@@ -243,7 +245,7 @@ func (c *Client) writePump(ctx context.Context) error {
 			err := c.socket.WriteControl(
 				websocket.PingMessage,
 				nil,
-				time.Now().Add(writeWait),
+				time.Now().Add(consts.WriteWait),
 			)
 			c.mu.Unlock()
 

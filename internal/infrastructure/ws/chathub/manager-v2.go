@@ -2,6 +2,7 @@ package chathub
 
 import (
 	"awesome-chat/internal/domain/app/ports"
+	"awesome-chat/internal/infrastructure/ws/chathub/consts"
 	chathubErrors "awesome-chat/internal/infrastructure/ws/chathub/errors"
 	"context"
 	"errors"
@@ -43,13 +44,13 @@ func NewClientManagerV2(
 				return true
 			},
 		},
-		opChan:    make(chan Operation, chanBuff),
-		broadcast: make(chan Message, chanBuff),
-		errChan:   make(chan error, chanBuff),
+		opChan:    make(chan Operation, consts.ChanBuff),
+		broadcast: make(chan Message, consts.ChanBuff),
+		errChan:   make(chan error, consts.ChanBuff),
 	}
 }
 
-func (m *ClientManagerV2) MustOperationHandler(handler operationHandler) {
+func (m *ClientManagerV2) MustSetOperationHandler(handler operationHandler) {
 	m.opHandler = handler
 }
 
@@ -97,7 +98,13 @@ func (m *ClientManagerV2) HandleWebSocket(
 }
 
 func (m *ClientManagerV2) broadcastToClients(message Message) {
-	msg := message.ToJSON()
+	opResp := &OperationResponse{
+		OperationType: consts.Broadcast.String(),
+		Success:       true,
+		Data:          message,
+	}
+	opRespBytes := opResp.ToJSON()
+
 	clients, ok := m.clientStore.GetClients(message.ChatID)
 	if !ok {
 		m.log.Warn("no clients found for chat", "chat_id", message.ChatID)
@@ -121,7 +128,7 @@ func (m *ClientManagerV2) broadcastToClients(message Message) {
 			continue
 		}
 		select {
-		case client.send <- msg:
+		case client.send <- opRespBytes:
 			m.log.Debug("message queued for client",
 				"client_id", id,
 				"chat_id", message.ChatID,
@@ -134,16 +141,6 @@ func (m *ClientManagerV2) broadcastToClients(message Message) {
 				_ = c.Close()
 			}(client)
 		}
-	}
-}
-
-func (m *ClientManagerV2) Broadcast(ctx context.Context, message Message) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case m.broadcast <- message:
-		m.log.Info("client broadcast", "chat_id", message.ChatID)
-		return nil
 	}
 }
 
@@ -164,12 +161,14 @@ func (m *ClientManagerV2) Start(ctx context.Context) error {
 				m.broadcastToClients(message)
 			}
 		case op := <-m.opChan:
-			if !m.isClosed.Load() {
+			if m.isClosed.Load() {
 				op.RespChan <- OperationResponse{Error: errors.New("client manager is shutting down")}
 				continue
 			}
 			opResp := m.opHandler.Handle(op.Ctx, op.Data)
-			if opResp.Error != nil {
+			if opResp.Error == nil {
+				op.RespChan <- opResp
+			} else {
 				m.log.Error("operation error",
 					"client_id", op.ClientID, "error", opResp.Error.Error(), "retries", op.Retries,
 				)
@@ -203,6 +202,16 @@ func (m *ClientManagerV2) Start(ctx context.Context) error {
 				}
 			}
 		}
+	}
+}
+
+func (m *ClientManagerV2) Broadcast(ctx context.Context, message Message) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case m.broadcast <- message:
+		m.log.Info("client broadcast", "chat_id", message.ChatID)
+		return nil
 	}
 }
 

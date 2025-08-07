@@ -15,11 +15,11 @@ type Operation struct {
 }
 
 type OperationResponse struct {
-	ID            int             `json:"id,omitempty"`
-	OperationType string          `json:"operation_type"`
-	Success       bool            `json:"success"`
-	Data          json.RawMessage `json:"data,omitempty"`
-	Error         error           `json:"error,omitempty"`
+	ID            int    `json:"id,omitempty"`
+	OperationType string `json:"operation_type"`
+	Success       bool   `json:"success"`
+	Data          any    `json:"data,omitempty"` // []byte
+	Error         error  `json:"error,omitempty"`
 }
 
 func (o *OperationResponse) ToJSON() []byte {
@@ -27,12 +27,12 @@ func (o *OperationResponse) ToJSON() []byte {
 	return payload
 }
 
-func SuccessResponse(opType string, data interface{}) OperationResponse {
-	jsonData, _ := json.Marshal(data)
+func SuccessResponse(opType string, data any) OperationResponse {
+	//jsonData, _ := json.Marshal(data)
 	return OperationResponse{
 		OperationType: opType,
 		Success:       true,
-		Data:          jsonData,
+		Data:          data,
 	}
 }
 

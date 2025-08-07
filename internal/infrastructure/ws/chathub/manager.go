@@ -2,6 +2,7 @@ package chathub
 
 import (
 	"awesome-chat/internal/domain/app/ports"
+	"awesome-chat/internal/infrastructure/ws/chathub/consts"
 	chathubErrors "awesome-chat/internal/infrastructure/ws/chathub/errors"
 	"context"
 	"errors"
@@ -43,11 +44,11 @@ func NewClientManager(
 				return true
 			},
 		},
-		opChan:     make(chan Operation, chanBuff),
-		broadcast:  make(chan Message, chanBuff),
-		register:   make(chan *Client, chanBuff),
-		unregister: make(chan *Client, chanBuff),
-		errChan:    make(chan error, chanBuff),
+		opChan:     make(chan Operation, consts.ChanBuff),
+		broadcast:  make(chan Message, consts.ChanBuff),
+		register:   make(chan *Client, consts.ChanBuff),
+		unregister: make(chan *Client, consts.ChanBuff),
+		errChan:    make(chan error, consts.ChanBuff),
 	}
 }
 

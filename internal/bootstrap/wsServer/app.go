@@ -39,8 +39,8 @@ func NewApp(_ context.Context) *App {
 
 	messageBroadcastWithPubUC := broadcast.NewMessageBroadcastWithPubImpl(log, wsClientManager)
 	wsSendMsgOpHandler := sendMessage.New(messageBroadcastWithPubUC)
-	wsOpHandler := transport.NewOperationHandler(wsSendMsgOpHandler)
-	wsClientManager.MustOperationHandler(wsOpHandler)
+	wsOpHandler := transport.NewOperationHandler(log, wsSendMsgOpHandler)
+	wsClientManager.MustSetOperationHandler(wsOpHandler)
 
 	healthHttpHandler := ws.NewHealthHandler()
 

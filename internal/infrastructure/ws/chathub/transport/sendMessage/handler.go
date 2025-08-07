@@ -4,6 +4,7 @@ import (
 	"awesome-chat/internal/application/message/dto"
 	"awesome-chat/internal/domain/core/message/ports/usecases"
 	"awesome-chat/internal/infrastructure/ws/chathub"
+	"awesome-chat/internal/infrastructure/ws/chathub/consts"
 	"awesome-chat/internal/infrastructure/ws/chathub/transport"
 	"context"
 	"encoding/json"
@@ -11,13 +12,13 @@ import (
 )
 
 type Handler struct {
-	opType transport.OperationType
+	opType consts.OperationType
 	uc     usecases.MessageBroadcastWithPub
 }
 
 func New(uc usecases.MessageBroadcastWithPub) *Handler {
 	return &Handler{
-		opType: transport.SendMessage,
+		opType: consts.SendMessage,
 		uc:     uc,
 	}
 }
