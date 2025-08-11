@@ -35,7 +35,7 @@ func (h *Handler) Start(ctx context.Context) error {
 	}
 	readChan := h.readPipe.GetReadChan()
 
-	h.log.Info("Starting acknowledger handler", withFields()...)
+	h.log.Info("Starting acknowledger...", withFields()...)
 
 	go func() {
 		for {

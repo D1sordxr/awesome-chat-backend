@@ -2,7 +2,7 @@ package batchSaver
 
 import (
 	appPorts "awesome-chat/internal/domain/app/ports"
-	"awesome-chat/internal/domain/core/message/ports"
+	"awesome-chat/internal/domain/core/message/ports/store"
 	"awesome-chat/internal/domain/core/message/ports/worker"
 	"awesome-chat/internal/domain/core/message/vo"
 	"context"
@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	batchSize     = 256
+	batchSize     = 64
 	flushInterval = time.Second * 3
 )
 
@@ -19,7 +19,7 @@ type Handler struct {
 	log           appPorts.Logger
 	ackWritePipe  worker.MessagePipe[string]
 	saverReadPipe worker.MessagePipe[vo.StreamMessage]
-	repo          ports.Repository
+	saverStore    store.SaveFromStreamStore
 	ackPipeTx     worker.AckPipeTx
 	batchSize     int
 	flushInterval time.Duration
@@ -29,14 +29,14 @@ func NewHandler(
 	log appPorts.Logger,
 	ackPipe worker.MessagePipe[string],
 	saverPipe worker.MessagePipe[vo.StreamMessage],
-	repo ports.Repository,
+	saverStore store.SaveFromStreamStore,
 	ackPipeTx worker.AckPipeTx,
 ) *Handler {
 	return &Handler{
 		log:           log,
 		ackWritePipe:  ackPipe,
 		saverReadPipe: saverPipe,
-		repo:          repo,
+		saverStore:    saverStore,
 		ackPipeTx:     ackPipeTx,
 		batchSize:     batchSize,
 		flushInterval: flushInterval,
@@ -45,22 +45,26 @@ func NewHandler(
 
 func (h *Handler) Start(ctx context.Context) error {
 	const op = "message.batchSaver.Handler.Start"
-	// TODO: withFields ...
+	withFields := func(args ...any) []any {
+		return append([]any{"operation", op}, args...)
+	}
+
+	h.log.Info("Starting batchSaver...", withFields()...)
+
 	ticker := time.NewTicker(h.flushInterval)
 	defer ticker.Stop()
 
-	batch := make([]vo.StreamMessage, 0, h.batchSize) // TODO: []entity.Message
+	batch := make([]vo.StreamMessage, 0, h.batchSize)
 
 	flush := func() error {
 		if len(batch) == 0 {
 			return nil
 		}
 
-		// TODO: []entity.Message parse
-
-		if err := h.repo.SaveBatch(ctx, batch); err != nil {
-			return fmt.Errorf("batch save failed: %w", err)
+		if err := h.saverStore.SaveBatch(ctx, batch); err != nil {
+			return fmt.Errorf("%s: batch save failed: %w", op, err)
 		}
+
 		for _, msg := range batch {
 			select {
 			case h.ackWritePipe.GetWriteChan() <- msg.AckID:
@@ -79,18 +83,16 @@ func (h *Handler) Start(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return flush()
-
 		case <-ticker.C:
 			if err := flush(); err != nil {
-				return err
+				h.log.Error("Failed to flush batch", withFields("error", err.Error())...)
 			}
-
 		case msg := <-h.saverReadPipe.GetReadChan():
 			batch = append(batch, msg)
 
 			if len(batch) >= h.batchSize {
 				if err := flush(); err != nil {
-					return err
+					h.log.Error("Failed to flush batch", withFields("error", err.Error())...)
 				}
 			}
 		}

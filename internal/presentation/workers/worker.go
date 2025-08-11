@@ -42,7 +42,6 @@ func (w *Worker) Start(ctx context.Context) error {
 	for idx, handler := range w.handlers {
 		func(idx int, handler Handler) {
 			errGroup.Go(func() error {
-				w.log.Info("starting worker handler", "idx", idx)
 				return handler.Start(gCtx)
 			})
 		}(idx, handler)

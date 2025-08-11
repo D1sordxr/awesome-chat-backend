@@ -32,6 +32,8 @@ func (h *Handler) Start(ctx context.Context) error {
 		return append([]any{"operation", op}, args...)
 	}
 
+	h.log.Info("Starting subscriber...")
+
 	for {
 		select {
 		case <-ctx.Done():

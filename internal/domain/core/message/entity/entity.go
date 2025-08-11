@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+type Message struct {
+	ID        int       `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	ChatID    uuid.UUID `json:"chat_id"`
+	Content   string    `json:"content"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
 type OldMessage struct {
 	ID      int    `json:"id"`
 	UserID  string `json:"user_id"`

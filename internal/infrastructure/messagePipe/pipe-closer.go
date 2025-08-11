@@ -2,7 +2,6 @@ package messagePipe
 
 import (
 	"context"
-	"sync"
 )
 
 type closer interface {
@@ -22,15 +21,10 @@ func NewPipeCloser(pipes ...closer) *PipeCloser {
 func (p *PipeCloser) Start(_ context.Context) error {
 	return nil
 }
-func (p *PipeCloser) Shutdown(_ context.Context) error {
-	var wg sync.WaitGroup
 
-	for _, pipe := range p.pipes {
-		wg.Add(1)
-		go func(p closer) {
-			defer wg.Done()
-			pipe.Close()
-		}(pipe)
+func (p *PipeCloser) Shutdown(_ context.Context) error {
+	for i := len(p.pipes) - 1; i >= 0; i-- {
+		p.pipes[i].Close()
 	}
 
 	return nil

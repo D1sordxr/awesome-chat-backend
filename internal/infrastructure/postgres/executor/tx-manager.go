@@ -5,6 +5,7 @@ import (
 	"awesome-chat/internal/infrastructure/postgres"
 	"context"
 	"errors"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -134,4 +135,8 @@ func (m *TransactionManager) GetBatchExecutor(ctx context.Context) (ports.Execut
 	}
 
 	return nil, errors.New("no batch found in context")
+}
+
+func (m *TransactionManager) GetPool() *pgxpool.Pool {
+	return m.Pool.Pool
 }

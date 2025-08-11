@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -25,7 +26,8 @@ type TransactionManager interface {
 
 type ExecutorManager interface {
 	GetExecutor(ctx context.Context) Executor
-	GetPoolExecutor() Executor
 	GetTxExecutor(ctx context.Context) (Executor, error)
 	GetBatchExecutor(ctx context.Context) (Executor, error)
+	GetPoolExecutor() Executor
+	GetPool() *pgxpool.Pool
 }

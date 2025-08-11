@@ -1,6 +1,10 @@
 package main
 
 import (
+	"context"
+	"os/signal"
+	"syscall"
+
 	"awesome-chat/internal/bootstrap"
 	"awesome-chat/internal/domain/core/message/vo"
 	"awesome-chat/internal/infrastructure/config/apps/worker"
@@ -8,18 +12,16 @@ import (
 	"awesome-chat/internal/infrastructure/messagePipe"
 	"awesome-chat/internal/infrastructure/postgres"
 	"awesome-chat/internal/infrastructure/postgres/executor"
-	"awesome-chat/internal/infrastructure/postgres/repositories"
+	"awesome-chat/internal/infrastructure/postgres/store/message"
 	"awesome-chat/internal/infrastructure/redis"
 	"awesome-chat/internal/infrastructure/redis/stream"
-	streamNames "awesome-chat/internal/infrastructure/redis/stream/names"
 	"awesome-chat/internal/presentation/workers"
 	"awesome-chat/internal/presentation/workers/message/handlers/acknowledger"
 	"awesome-chat/internal/presentation/workers/message/handlers/batchSaver"
 	"awesome-chat/internal/presentation/workers/message/handlers/streamSubscriber"
-	"context"
+
+	streamNames "awesome-chat/internal/infrastructure/redis/stream/names"
 	redisLib "github.com/redis/go-redis/v9"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
@@ -35,8 +37,9 @@ func main() {
 
 	redisConn := redis.NewConnection(&cfg.StreamSubscriber)
 
-	messageRepo := repositories.NewMessageRepo(txManager)
+	messageSaveFromStreamStore := message.NewSaveFromStreamStore(txManager)
 
+	messageAckPipeTx := messagePipe.NewAckPipeTx()
 	messageAckPipe := messagePipe.NewMessagePipe[string]()
 	messageSaverPipe := messagePipe.NewMessagePipe[vo.StreamMessage]()
 	messageStreamPipe := messagePipe.NewMessagePipe[redisLib.XMessage]()
@@ -45,7 +48,6 @@ func main() {
 		messageSaverPipe,
 		messageStreamPipe,
 	)
-	messageAckPipeTx := messagePipe.NewAckPipeTx()
 
 	messageStreamSubscriber := stream.NewSubscriberImpl(
 		log,
@@ -62,11 +64,11 @@ func main() {
 		messageStreamSubscriber,
 		messageAckPipeTx,
 	)
-	messageSaverHandler := batchSaver.NewHandler( // TODO batch save
+	messageSaverHandler := batchSaver.NewHandler(
 		log,
 		messageAckPipe,
 		messageSaverPipe,
-		messageRepo,
+		messageSaveFromStreamStore,
 		messageAckPipeTx,
 	)
 	messageReaderHandler := streamSubscriber.NewHandler(
@@ -86,8 +88,8 @@ func main() {
 		log,
 		pool,
 		redisConn,
-		pipeCloser,
 		messageAckPipeTx,
+		pipeCloser,
 		messageStreamSubscriber,
 		mainWorker,
 	)
