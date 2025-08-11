@@ -33,7 +33,6 @@ type Handler struct {
 	getMessagesUC          getMessagesUseCase
 	saveUC                 saveUseCase
 	sendUC                 sendUseCase
-	sendFastUC             sendFastUseCase
 	sendSyncUC             sendSyncUseCase
 	getForChatWithFilterUC getForChatWithFilterUseCase
 }
@@ -42,7 +41,6 @@ func NewMessageHandler(
 	getMessagesUC getMessagesUseCase,
 	saveUC saveUseCase,
 	sendUC sendUseCase,
-	sendFastUC sendFastUseCase,
 	sendSyncUC sendSyncUseCase,
 	getForChatWithFilterUC getForChatWithFilterUseCase,
 ) *Handler {
@@ -50,7 +48,6 @@ func NewMessageHandler(
 		sendSyncUC:             sendSyncUC,
 		saveUC:                 saveUC,
 		sendUC:                 sendUC,
-		sendFastUC:             sendFastUC,
 		getMessagesUC:          getMessagesUC,
 		getForChatWithFilterUC: getForChatWithFilterUC,
 	}
@@ -70,17 +67,6 @@ func (h *Handler) Save(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.SendStatus(fiber.StatusOK)
-}
-
-func (h *Handler) SendFast(ctx *fiber.Ctx) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx.Context(), 2*time.Second)
-	defer cancel()
-
-	if err := h.sendFastUC.Execute(timeoutCtx, ctx.Body()); err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
-	}
-
-	return ctx.SendStatus(fiber.StatusAccepted)
 }
 
 func (h *Handler) Send(ctx *fiber.Ctx) error {
@@ -171,7 +157,6 @@ func (h *Handler) getForChatWithFilter(ctx *fiber.Ctx) error {
 func (h *Handler) RegisterRoutes(router fiber.Router) {
 	router.Post("/message/save", h.Save)
 	router.Post("/message/send", h.Send)
-	router.Post("/message/send-fast", h.SendFast)
 	router.Post("/message/send-sync", h.SendSync)
 	router.Get("/message", h.GetMessages)
 	router.Get("/message/filter", h.getForChatWithFilter)

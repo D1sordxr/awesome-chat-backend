@@ -1,0 +1,11 @@
+storage:
+  host: "postgres"
+  user: "postgres"
+  password: "postgres"
+  port: 5432
+  database: "awesome-chat-db"
+  migration: true
+
+stream_subscriber:
+  client_address: "redis:6379"
+  password: "awesome-password"

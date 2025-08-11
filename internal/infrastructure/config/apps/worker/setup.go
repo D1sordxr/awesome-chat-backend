@@ -1,18 +1,17 @@
-package wsServer
+package worker
 
 import (
-	"awesome-chat/internal/infrastructure/config/http"
+	"awesome-chat/internal/infrastructure/config/postgres"
 	"awesome-chat/internal/infrastructure/config/redis"
 	"github.com/ilyakaznacheev/cleanenv"
 	"os"
 )
 
-const basicConfigPath = "./configs/ws-server/prod.yaml"
+const basicConfigPath = "./configs/worker/prod.yaml"
 
 type Config struct {
-	AppEnv     string       `yaml:"app_env" env-default:"prod"`
-	HTTPServer http.Config  `yaml:"http"`
-	Redis      redis.Config `yaml:"redis"`
+	Storage          postgres.Config `yaml:"storage"`
+	StreamSubscriber redis.Config    `yaml:"stream_subscriber"`
 }
 
 func NewConfig() *Config {

@@ -32,6 +32,20 @@ services:
     networks:
       - awesome-network
 
+  redis:
+    image: bitnami/redis:latest
+    container_name: awesome-chat-redis
+    # restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - awesome-network
+    environment:
+      # Optional: Set a password for Redis (replace with a strong password)
+     - REDIS_PASSWORD=awesome-password
+
   migrations:
     build: .
     command: >
@@ -79,6 +93,7 @@ services:
       - "8081:8081"
     depends_on:
       - api
+      - redis
     environment:
       CONFIG_PATH: ./configs/ws-server/prod.yaml
     healthcheck:
@@ -88,8 +103,22 @@ services:
       retries: 3
     networks:
       - awesome-network
+  worker:
+    build:
+      context: .
+      target: builder
+    command: ["/app/worker"]
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      CONFIG_PATH: ./configs/worker/prod.yaml
+    networks:
+      - awesome-network
 
 volumes:
+  redis_data:
+    driver: local
   pgdata:
     driver: local
 

@@ -1,9 +1,9 @@
-package redis
+package pubsub
 
 import (
 	cfg "awesome-chat/internal/infrastructure/config/redis"
 	"context"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 type Publisher struct {

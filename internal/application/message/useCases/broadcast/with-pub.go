@@ -3,24 +3,29 @@ package broadcast
 import (
 	"awesome-chat/internal/application/message/dto"
 	appPorts "awesome-chat/internal/domain/app/ports"
+	"awesome-chat/internal/domain/core/message/vo"
+	"awesome-chat/internal/domain/core/shared/ports"
 	"awesome-chat/internal/domain/core/shared/ports/ws"
 	"awesome-chat/internal/infrastructure/ws/chathub"
 	"context"
 	"fmt"
+	"time"
 )
 
 type MessageBroadcastWithPubImpl struct {
 	log appPorts.Logger
-	// redis client
-	br ws.MessageBroadcaster
+	pub ports.StreamPublisher
+	br  ws.MessageBroadcaster
 }
 
 func NewMessageBroadcastWithPubImpl(
 	log appPorts.Logger,
+	pub ports.StreamPublisher,
 	br ws.MessageBroadcaster,
 ) *MessageBroadcastWithPubImpl {
 	return &MessageBroadcastWithPubImpl{
 		log: log,
+		pub: pub,
 		br:  br,
 	}
 }
@@ -33,22 +38,32 @@ func (m *MessageBroadcastWithPubImpl) Execute(
 	withFields := func(fields ...any) []any {
 		return append([]any{
 			"operation", op,
-			"user_id", req.UserID,
-			"chat_id", req.ChatID,
-			"content_length", len(req.Content),
 		}, fields...)
 	}
 	m.log.Info("Starting operation", withFields()...)
 
-	// TODO: redis client
-	m.log.Warn("Redis client not implemented. Message won't be saved", withFields()...)
+	timestamp := time.Now()
 
-	msg := chathub.Message{
-		UserID:  req.UserID,
-		ChatID:  req.ChatID,
-		Content: req.Content,
+	if err := m.pub.Publish(ctx, vo.StreamMessage{
+		Event:     vo.SentMessageEvent,
+		UserID:    req.UserID,
+		ChatID:    req.ChatID,
+		Content:   req.Content,
+		Timestamp: timestamp,
+	}.ToMap()); err != nil {
+		m.log.Error("Failed to publish message.",
+			withFields("error", err.Error())...)
+		return fmt.Errorf("%s: %w", op, err)
 	}
-	if err := m.br.Broadcast(ctx, msg); err != nil {
+
+	if err := m.br.Broadcast(ctx, chathub.Message{ // TODO: prefer to replace into domain
+		UserID:    req.UserID,
+		ChatID:    req.ChatID,
+		Content:   req.Content,
+		Timestamp: timestamp.String(),
+	}); err != nil {
+		m.log.Error("Failed to broadcast message. Message will be saved to DB.",
+			withFields("error", err.Error())...)
 		return fmt.Errorf("%s: %w", op, err)
 	}
 

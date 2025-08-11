@@ -1,5 +1,9 @@
 app_env: "prod"
 
+redis:
+  client_address: "redis:6379"
+  password: "awesome-password"
+
 http:
   address: "localhost"
   port: "8081"

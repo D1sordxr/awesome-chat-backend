@@ -129,10 +129,6 @@ func (m *ClientManagerV2) broadcastToClients(message Message) {
 		}
 		select {
 		case client.send <- opRespBytes:
-			m.log.Debug("message queued for client",
-				"client_id", id,
-				"chat_id", message.ChatID,
-				"queue_size", len(client.send))
 		default:
 			m.log.Warn("client buffer full, disconnecting",
 				"client_id", id,

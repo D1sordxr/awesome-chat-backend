@@ -11,7 +11,7 @@ COPY . .
 
 # Build all binaries
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/api ./cmd/api/main.go && \
-    CGO_ENABLED=0 GOOS=linux go build -o /app/outbox-processor ./cmd/outbox-processor/main.go && \
+    CGO_ENABLED=0 GOOS=linux go build -o /app/worker ./cmd/worker/main.go && \
     CGO_ENABLED=0 GOOS=linux go build -o /app/ws-server ./cmd/ws-server/main.go && \
     CGO_ENABLED=0 GOOS=linux go build -o /app/topic-creator ./cmd/topic-creator/main.go
 
@@ -22,7 +22,7 @@ WORKDIR /app
 
 # Copy binaries from builder
 COPY --from=builder /app/api /app/api
-COPY --from=builder /app/outbox-processor /app/outbox-processor
+COPY --from=builder /app/worker /app/worker
 COPY --from=builder /app/ws-server /app/ws-server
 COPY --from=builder /app/topic-creator /app/topic-creator
 

@@ -49,12 +49,12 @@ func (a *App) Run(ctx context.Context) {
 func (a *App) shutdown() {
 	a.log.Info("App shutting down")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	errs := make([]error, 0, len(a.components))
-	for _, component := range a.components {
-		if err := component.Shutdown(shutdownCtx); err != nil {
+	for i := len(a.components) - 1; i >= 0; i-- {
+		if err := a.components[i].Shutdown(shutdownCtx); err != nil {
 			errs = append(errs, err)
 		}
 	}

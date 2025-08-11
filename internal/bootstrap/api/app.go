@@ -5,7 +5,6 @@ import (
 	chatCreate "awesome-chat/internal/application/chat/useCases/create"
 	"awesome-chat/internal/application/chat/useCases/getAllMessages"
 	"awesome-chat/internal/application/chat/useCases/getUserChatPreview"
-	messageSendFast "awesome-chat/internal/application/message/useCases/fast"
 	messageGet "awesome-chat/internal/application/message/useCases/get"
 	"awesome-chat/internal/application/message/useCases/getForChatWithFilter"
 	messageSave "awesome-chat/internal/application/message/useCases/save"
@@ -26,7 +25,6 @@ import (
 	chatStore "awesome-chat/internal/infrastructure/postgres/store/chat"
 	messageStore "awesome-chat/internal/infrastructure/postgres/store/message"
 	userStore "awesome-chat/internal/infrastructure/postgres/store/user"
-	"awesome-chat/internal/infrastructure/redis"
 	fiberHttp "awesome-chat/internal/presentation/httpFiber"
 	chatHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/chat"
 	"awesome-chat/internal/presentation/httpFiber/delivery/handlers/health"
@@ -115,7 +113,6 @@ func NewApp(ctx context.Context) *App {
 
 	outboxRepo := repos.NewOutboxRepo(txManager)
 	messageRepo := repos.NewMessageRepo(txManager)
-	messagePublisher := redis.NewPublisher(&cfg.MessagePublisher)
 	messageGetStore := messageStore.NewGetStore(txManager)
 	messageGetForChatWithFilterStore := messageStore.NewGetForChatWithFilter(txManager)
 
@@ -134,7 +131,6 @@ func NewApp(ctx context.Context) *App {
 		messageEntityCreator,
 		messageRepo,
 	)
-	messageSendFastUC := messageSendFast.NewMessageSendFastUseCase(messagePublisher)
 	messageSendSyncUC := messageSend.NewMessageSendSyncUseCase(
 		messageRepo,
 		messageEntityCreator,
@@ -149,7 +145,6 @@ func NewApp(ctx context.Context) *App {
 		messageGetUC,
 		messageSaveUC,
 		messageSendUC,
-		messageSendFastUC,
 		messageSendSyncUC,
 		messageGetForChatWithFilter,
 	)

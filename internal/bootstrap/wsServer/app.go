@@ -5,6 +5,9 @@ import (
 	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/infrastructure/config/apps/wsServer"
 	"awesome-chat/internal/infrastructure/logger"
+	"awesome-chat/internal/infrastructure/redis"
+	"awesome-chat/internal/infrastructure/redis/stream"
+	streamNames "awesome-chat/internal/infrastructure/redis/stream/names"
 	"awesome-chat/internal/infrastructure/ws/chathub"
 	"awesome-chat/internal/infrastructure/ws/chathub/transport"
 	"awesome-chat/internal/infrastructure/ws/chathub/transport/sendMessage"
@@ -33,11 +36,18 @@ func NewApp(_ context.Context) *App {
 
 	log := logger.NewLogger()
 
+	redisConn := redis.NewConnection(&cfg.Redis)
+	redisStreamPub := stream.NewPublisherImpl(redisConn, streamNames.SentMessage.String())
+
 	//wsClientManager := chathub.NewClientManager(log)
 	wsClientStore := chathub.NewInMemoryClientStoreImpl()
 	wsClientManager := chathub.NewClientManagerV2(log, wsClientStore)
 
-	messageBroadcastWithPubUC := broadcast.NewMessageBroadcastWithPubImpl(log, wsClientManager)
+	messageBroadcastWithPubUC := broadcast.NewMessageBroadcastWithPubImpl(
+		log,
+		redisStreamPub,
+		wsClientManager,
+	)
 	wsSendMsgOpHandler := sendMessage.New(messageBroadcastWithPubUC)
 	wsOpHandler := transport.NewOperationHandler(log, wsSendMsgOpHandler)
 	wsClientManager.MustSetOperationHandler(wsOpHandler)
@@ -58,6 +68,7 @@ func NewApp(_ context.Context) *App {
 	)
 
 	components := setupComponents(
+		redisConn,
 		wsClientManager,
 		server,
 	)

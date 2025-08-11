@@ -4,7 +4,7 @@ import (
 	"awesome-chat/internal/domain/app/ports"
 	"context"
 	"fmt"
-	"sync"
+	"golang.org/x/sync/errgroup"
 )
 
 type Handler interface {
@@ -13,9 +13,9 @@ type Handler interface {
 
 type Worker struct {
 	log      ports.Logger
-	wg       sync.WaitGroup
-	errChan  chan error
 	handlers []Handler
+	errChan  chan error
+	done     chan struct{}
 }
 
 func NewWorker(
@@ -24,62 +24,42 @@ func NewWorker(
 ) *Worker {
 	return &Worker{
 		log:      log,
-		wg:       sync.WaitGroup{},
-		errChan:  make(chan error),
 		handlers: handlers,
+		errChan:  make(chan error),
+		done:     make(chan struct{}),
 	}
 }
 
 func (w *Worker) Start(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	w.log.Info("starting worker", "total_handlers", len(w.handlers))
 
-	w.wg.Add(len(w.handlers))
-	for i, handler := range w.handlers {
-		go func(idx int, h Handler) {
-			defer w.wg.Done()
+	errGroup, gCtx := errgroup.WithContext(ctx)
+	go func() {
+		w.errChan <- errGroup.Wait()
+		close(w.done)
+	}()
 
-			select {
-			case <-ctx.Done():
-				w.log.Debug("handler skipped due to shutdown", "handler_index", idx)
-				return
-			default:
-				w.log.Debug("starting handler", "handler_index", idx)
-				if err := h.Start(ctx); err != nil {
-					w.log.Error("handler failed", "error", err, "handler_index", idx)
-					select {
-					case w.errChan <- err:
-					case <-ctx.Done():
-					}
-				}
-			}
-		}(i, handler)
+	for idx, handler := range w.handlers {
+		func(idx int, handler Handler) {
+			errGroup.Go(func() error {
+				w.log.Info("starting worker handler", "idx", idx)
+				return handler.Start(gCtx)
+			})
+		}(idx, handler)
 	}
 
 	select {
 	case err := <-w.errChan:
 		w.log.Error("worker received critical error, initiating shutdown", "error", err)
-		cancel()
 		return fmt.Errorf("handler error: %w", err)
-
 	case <-ctx.Done():
-		w.log.Info("worker context cancelled")
+		return nil
 	}
-
-	return nil
 }
 
 func (w *Worker) Shutdown(ctx context.Context) error {
-	done := make(chan struct{})
-	go func() {
-		w.wg.Wait()
-		close(done)
-	}()
-
 	select {
-	case <-done:
+	case <-w.done:
 		w.log.Info("all handlers stopped")
 		return nil
 	case <-ctx.Done():
