@@ -5,6 +5,7 @@ import (
 	"awesome-chat/internal/domain/core/message/ports/worker"
 	"awesome-chat/internal/domain/core/shared/ports"
 	"context"
+	"time"
 )
 
 type Handler struct {
@@ -33,30 +34,57 @@ func (h *Handler) Start(ctx context.Context) error {
 	withFields := func(args ...any) []any {
 		return append([]any{"operation", op}, args...)
 	}
-	readChan := h.readPipe.GetReadChan()
 
 	h.log.Info("Starting acknowledger...", withFields()...)
+	defer h.log.Info("Acknowledger stopped", withFields()...)
 
-	go func() {
-		for {
-			select {
-			case id, ok := <-readChan:
-				if !ok {
-					return
-				}
-				if err := func(id string) error {
-					defer h.ackPipeTx.Confirm()
-					return h.acknowledger.Ack(ctx, id)
-				}(id); err != nil {
-					h.log.Error("acknowledgement error", withFields("id", id, "error", err.Error())...)
-				}
+	readChan := h.readPipe.GetReadChan()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case id, ok := <-readChan:
+			if !ok {
+				return nil
+			}
+			if err := h.ackWithContext(ctx, id); err != nil {
+				h.log.Error("acknowledgement error", withFields("id", id, "error", err.Error())...)
 			}
 		}
+	}
+}
 
+func (h *Handler) ackWithContext(ctx context.Context, id string) error {
+	defer h.ackPipeTx.Confirm()
+	return h.acknowledger.Ack(ctx, id)
+}
+
+func (h *Handler) ackWithNewContext(id string) error {
+	defer h.ackPipeTx.Confirm()
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	return h.acknowledger.Ack(ctx, id)
+}
+
+func (h *Handler) Stop(ctx context.Context) error {
+	done := make(chan struct{})
+
+	go func() {
+		defer close(done)
+		for id := range h.readPipe.GetReadChan() {
+			if err := h.ackWithNewContext(id); err != nil {
+				h.log.Error("final ack failed",
+					"operation", "message.acknowledger.Handler.Stop",
+					"error", err.Error(),
+				)
+			}
+		}
 	}()
 
-	<-ctx.Done()
-	h.ackPipeTx.Wait()
-
-	return nil
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

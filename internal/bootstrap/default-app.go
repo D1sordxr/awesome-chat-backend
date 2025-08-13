@@ -54,6 +54,7 @@ func (a *App) shutdown() {
 
 	errs := make([]error, 0, len(a.components))
 	for i := len(a.components) - 1; i >= 0; i-- {
+		a.log.Info("Shutting down component", "idx", i)
 		if err := a.components[i].Shutdown(shutdownCtx); err != nil {
 			errs = append(errs, err)
 		}

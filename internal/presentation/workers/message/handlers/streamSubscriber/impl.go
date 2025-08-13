@@ -32,13 +32,16 @@ func (h *Handler) Start(ctx context.Context) error {
 		return append([]any{"operation", op}, args...)
 	}
 
-	h.log.Info("Starting subscriber...")
+	h.log.Info("Starting subscriber...", logFields()...)
+	defer h.log.Info("Subscriber stopped", logFields()...)
+
+	readChan := h.subscriber.GetReadChan()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case msg, ok := <-h.subscriber.GetReadChan():
+		case msg, ok := <-readChan:
 			if !ok {
 				h.log.Info("Message channel closed", logFields()...)
 				return nil
@@ -58,5 +61,21 @@ func (h *Handler) Start(ctx context.Context) error {
 				h.log.Warn("Saver queue overflow, message dropped", logFields("id", msg.ID)...)
 			}
 		}
+	}
+}
+
+func (h *Handler) Stop(ctx context.Context) error {
+	done := make(chan struct{})
+
+	go func() {
+		h.saverPipe.Close()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }

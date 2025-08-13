@@ -2,7 +2,6 @@ package vo
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 )
 
@@ -33,13 +32,13 @@ func (m StreamMessage) ToMap() map[string]any {
 		"user_id":   m.UserID,
 		"chat_id":   m.ChatID,
 		"content":   m.Content,
-		"timestamp": m.Timestamp.Unix(),
+		"timestamp": m.Timestamp.UTC().Format(time.RFC3339Nano),
 	}
 }
 
 func ParseStreamMessage(ackID string, data map[string]any) (StreamMessage, error) {
 	var result StreamMessage
-	
+
 	result.AckID = ackID
 
 	if chatID, ok := data[chatIDMapKey].(string); ok {
@@ -67,11 +66,11 @@ func ParseStreamMessage(ackID string, data map[string]any) (StreamMessage, error
 	}
 
 	if tsStr, ok := data[timestampKey].(string); ok {
-		tsInt, err := strconv.ParseInt(tsStr, 10, 64)
+		ts, err := time.Parse(time.RFC3339Nano, tsStr)
 		if err != nil {
-			return StreamMessage{}, fmt.Errorf("invalid timestamp: %w", err)
+			return StreamMessage{}, fmt.Errorf("invalid timestamp format: %w", err)
 		}
-		result.Timestamp = time.Unix(tsInt, 0)
+		result.Timestamp = ts
 	} else {
 		return StreamMessage{}, fmt.Errorf("invalid or missing timestamp")
 	}

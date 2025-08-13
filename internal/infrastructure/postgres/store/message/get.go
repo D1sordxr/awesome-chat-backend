@@ -18,7 +18,8 @@ func (s *GetStore) GetAllMessagesFromChat(ctx context.Context, chatID string) ([
 	conn := s.executor.GetPoolExecutor()
 	query := `SELECT 
 		user_id, chat_id, content
-	FROM message WHERE chat_id = $1`
+	FROM message WHERE chat_id = $1
+	ORDER BY created_at DESC`
 
 	rows, err := conn.Query(ctx, query, chatID)
 	if err != nil {

@@ -24,6 +24,7 @@ import (
 	repos "awesome-chat/internal/infrastructure/postgres/repositories"
 	chatStore "awesome-chat/internal/infrastructure/postgres/store/chat"
 	messageStore "awesome-chat/internal/infrastructure/postgres/store/message"
+	"awesome-chat/internal/infrastructure/postgres/store/message/getFunc"
 	userStore "awesome-chat/internal/infrastructure/postgres/store/user"
 	fiberHttp "awesome-chat/internal/presentation/httpFiber"
 	chatHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/chat"
@@ -31,6 +32,7 @@ import (
 	messageHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/message"
 	userHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/user"
 	"context"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/sync/errgroup"
 	"log/slog"
 	"time"
@@ -140,6 +142,11 @@ func NewApp(ctx context.Context) *App {
 		log,
 		messageGetForChatWithFilterStore,
 	)
+	messageGetFunc := getFunc.NewGetMessagesFunc(
+		func() *pgxpool.Pool {
+			return pool.Pool
+		},
+	)
 
 	messageHandlers := messageHandler.NewMessageHandler(
 		messageGetUC,
@@ -147,6 +154,7 @@ func NewApp(ctx context.Context) *App {
 		messageSendUC,
 		messageSendSyncUC,
 		messageGetForChatWithFilter,
+		messageGetFunc,
 	)
 
 	srv := fiberHttp.NewServer(

@@ -50,6 +50,7 @@ func (h *Handler) Start(ctx context.Context) error {
 	}
 
 	h.log.Info("Starting batchSaver...", withFields()...)
+	defer h.log.Info("BatchSaver stopped", withFields()...)
 
 	ticker := time.NewTicker(h.flushInterval)
 	defer ticker.Stop()
@@ -96,5 +97,21 @@ func (h *Handler) Start(ctx context.Context) error {
 				}
 			}
 		}
+	}
+}
+
+func (h *Handler) Stop(ctx context.Context) error {
+	done := make(chan struct{})
+
+	go func() {
+		h.ackWritePipe.Close()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }

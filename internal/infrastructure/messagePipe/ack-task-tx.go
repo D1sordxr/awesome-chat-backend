@@ -3,6 +3,7 @@ package messagePipe
 import (
 	"context"
 	"sync"
+	"time"
 )
 
 type AckPipeTx struct {
@@ -33,10 +34,21 @@ func (a *AckPipeTx) Start(_ context.Context) error {
 }
 
 func (a *AckPipeTx) Shutdown(ctx context.Context) error {
-	<-ctx.Done()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	a.wg.Done()
-	a.wg.Wait()
-	
-	return nil
+
+	done := make(chan struct{})
+	go func() {
+		a.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-done:
+		return nil
+	}
 }

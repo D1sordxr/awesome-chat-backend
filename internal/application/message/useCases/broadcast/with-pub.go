@@ -42,7 +42,7 @@ func (m *MessageBroadcastWithPubImpl) Execute(
 	}
 	m.log.Info("Starting operation", withFields()...)
 
-	timestamp := time.Now()
+	timestamp := time.Now().UTC()
 
 	if err := m.pub.Publish(ctx, vo.StreamMessage{
 		Event:     vo.SentMessageEvent,
@@ -60,7 +60,7 @@ func (m *MessageBroadcastWithPubImpl) Execute(
 		UserID:    req.UserID,
 		ChatID:    req.ChatID,
 		Content:   req.Content,
-		Timestamp: timestamp.String(),
+		Timestamp: timestamp.Format(time.RFC3339Nano),
 	}); err != nil {
 		m.log.Error("Failed to broadcast message. Message will be saved to DB.",
 			withFields("error", err.Error())...)

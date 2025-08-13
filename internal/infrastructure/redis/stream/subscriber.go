@@ -81,9 +81,11 @@ func (s *SubscriberImpl) readGroup(ctx context.Context) error {
 func (s *SubscriberImpl) groupCheck(ctx context.Context) error {
 	err := s.client.XGroupCreateMkStream(ctx, s.streamName, s.groupName, "0").Err()
 	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {
+
 		return err
 	}
-
+	s.log.Warn("Stream already exists",
+		"stream_name", s.streamName, "group_name", s.groupName)
 	return nil
 }
 
@@ -119,5 +121,6 @@ func (s *SubscriberImpl) Start(ctx context.Context) error {
 
 func (s *SubscriberImpl) Shutdown(_ context.Context) error {
 	close(s.done)
+	s.streamPipe.Close()
 	return nil
 }

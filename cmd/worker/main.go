@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"os/signal"
 	"syscall"
 
@@ -25,7 +26,7 @@ import (
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	cfg := worker.NewConfig()
@@ -43,11 +44,6 @@ func main() {
 	messageAckPipe := messagePipe.NewMessagePipe[string]()
 	messageSaverPipe := messagePipe.NewMessagePipe[vo.StreamMessage]()
 	messageStreamPipe := messagePipe.NewMessagePipe[redisLib.XMessage]()
-	pipeCloser := messagePipe.NewPipeCloser(
-		messageAckPipe,
-		messageSaverPipe,
-		messageStreamPipe,
-	)
 
 	messageStreamSubscriber := stream.NewSubscriberImpl(
 		log,
@@ -89,7 +85,7 @@ func main() {
 		pool,
 		redisConn,
 		messageAckPipeTx,
-		pipeCloser,
+		//pipeCloser,
 		messageStreamSubscriber,
 		mainWorker,
 	)

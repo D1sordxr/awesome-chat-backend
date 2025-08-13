@@ -2,6 +2,7 @@ package messages
 
 import (
 	"awesome-chat/internal/application/message/dto"
+	"awesome-chat/internal/domain/core/message/ports/usecases"
 	"context"
 	"time"
 
@@ -14,9 +15,6 @@ type (
 	}
 	getMessagesUseCase interface {
 		Execute(ctx context.Context, req dto.GetRequest) (dto.Messages, error)
-	}
-	sendFastUseCase interface {
-		Execute(ctx context.Context, payload []byte) error
 	}
 	sendUseCase interface {
 		Execute(ctx context.Context, req dto.SendRequest) error
@@ -35,6 +33,7 @@ type Handler struct {
 	sendUC                 sendUseCase
 	sendSyncUC             sendSyncUseCase
 	getForChatWithFilterUC getForChatWithFilterUseCase
+	getFunc                usecases.GetMessagesFunc
 }
 
 func NewMessageHandler(
@@ -43,6 +42,7 @@ func NewMessageHandler(
 	sendUC sendUseCase,
 	sendSyncUC sendSyncUseCase,
 	getForChatWithFilterUC getForChatWithFilterUseCase,
+	getFunc usecases.GetMessagesFunc,
 ) *Handler {
 	return &Handler{
 		sendSyncUC:             sendSyncUC,
@@ -50,6 +50,7 @@ func NewMessageHandler(
 		sendUC:                 sendUC,
 		getMessagesUC:          getMessagesUC,
 		getForChatWithFilterUC: getForChatWithFilterUC,
+		getFunc:                getFunc,
 	}
 }
 
