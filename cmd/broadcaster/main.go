@@ -105,7 +105,7 @@ func (c *WebSocketClient) sendMessage() error {
 	}
 
 	// Prepare operation DTO
-	operation := transport.OperationDTO{
+	operation := transport.OperationHeader{
 		ID:        rand.Int(),
 		Operation: consts.SendMessage.String(),
 		Body:      messageBytes,

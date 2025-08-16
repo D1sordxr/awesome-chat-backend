@@ -44,7 +44,7 @@ func (o *OperationHandler) Handle(
 ) chathub.OperationResponse {
 	const op = "ws.chathub.OperationHandler"
 
-	var opDTO OperationDTO
+	var opDTO OperationHeader
 	if err := json.Unmarshal(data, &opDTO); err != nil {
 		return chathub.ErrorResponse(func() string {
 			if opDTO.Operation != "" {
@@ -54,8 +54,6 @@ func (o *OperationHandler) Handle(
 			}
 		}(), fmt.Errorf("%s: %w", op, errors.ErrInvalidOpFormat))
 	}
-
-	o.log.Debug("Handling operation", "op", op, "operation_type", opDTO.Operation)
 
 	handler, exists := o.handlerStore[consts.OperationType(opDTO.Operation)]
 	if !exists {
