@@ -1,7 +1,7 @@
 package voice
 
 import (
-	minioPorts "awesome-chat/internal/domain/core/shared/ports/minio"
+	minioPorts "awesome-chat/internal/domain/core/shared/ports/s3"
 	root "awesome-chat/internal/infrastructure/minio"
 	"bytes"
 	"context"
@@ -61,5 +61,17 @@ func (s *Storage) Add(
 		return fmt.Errorf("failed to upload voice message: %w", err)
 	}
 
+	return nil
+}
+
+func (s *Storage) Delete(ctx context.Context, objID string) error {
+	if err := s.conn.RemoveObject(
+		ctx,
+		s.bucketName,
+		objID,
+		minio.RemoveObjectOptions{},
+	); err != nil {
+		return fmt.Errorf("failed to delete object: %w", err)
+	}
 	return nil
 }

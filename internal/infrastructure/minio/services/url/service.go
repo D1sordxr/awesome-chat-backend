@@ -34,12 +34,27 @@ func NewUrlService(
 	}
 }
 
+func (s *Service) GenerateURL(ctx context.Context, objID string) (string, error) {
+	newURL, err := s.minioClient.PresignedGetObject(
+		ctx,
+		s.bucketName,
+		objID,
+		s.ttl,
+		nil,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate pre-signed URL: %w", err)
+	}
+
+	return newURL.String(), nil
+}
+
 // Read returns file data by objID, using cached URL or generating a new one.
 func (s *Service) Read(ctx context.Context, objID string) ([]byte, error) {
 	// 1. Try to get URL from cache
 	cachedURL, err := s.urlCache.Read(ctx, objID)
 	if err == nil {
-		data, dErr := s.downloadFromURL(ctx, cachedURL)
+		data, dErr := s.DownloadFromURL(ctx, cachedURL)
 		if dErr == nil {
 			return data, nil
 		}
@@ -66,7 +81,7 @@ func (s *Service) Read(ctx context.Context, objID string) ([]byte, error) {
 	}
 
 	// 4. Download file
-	data, err := s.downloadFromURL(ctx, urlStr)
+	data, err := s.DownloadFromURL(ctx, urlStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to download file: %w", err)
 	}
@@ -74,8 +89,8 @@ func (s *Service) Read(ctx context.Context, objID string) ([]byte, error) {
 	return data, nil
 }
 
-// downloadFromURL downloads file by URL (could be HTTP client with retry).
-func (s *Service) downloadFromURL(ctx context.Context, url string) ([]byte, error) {
+// DownloadFromURL downloads file by URL (could be HTTP client with retry).
+func (s *Service) DownloadFromURL(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err

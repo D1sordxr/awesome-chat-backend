@@ -33,7 +33,7 @@ type Handler struct {
 	sendUC                 sendUseCase
 	sendSyncUC             sendSyncUseCase
 	getForChatWithFilterUC getForChatWithFilterUseCase
-	getFunc                usecases.GetMessagesFunc
+	sendVoiceUC            usecases.SendVoice
 }
 
 func NewMessageHandler(
@@ -42,7 +42,7 @@ func NewMessageHandler(
 	sendUC sendUseCase,
 	sendSyncUC sendSyncUseCase,
 	getForChatWithFilterUC getForChatWithFilterUseCase,
-	getFunc usecases.GetMessagesFunc,
+	sendVoiceUC usecases.SendVoice,
 ) *Handler {
 	return &Handler{
 		sendSyncUC:             sendSyncUC,
@@ -50,8 +50,49 @@ func NewMessageHandler(
 		sendUC:                 sendUC,
 		getMessagesUC:          getMessagesUC,
 		getForChatWithFilterUC: getForChatWithFilterUC,
-		getFunc:                getFunc,
+		sendVoiceUC:            sendVoiceUC,
 	}
+}
+
+func (h *Handler) SendVoice(ctx *fiber.Ctx) error {
+	data := new(dto.SendVoiceRequest)
+	defer func() {
+		data.Blob = ""
+	}()
+
+	blob, err := ctx.FormFile("audio")
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "error reading file",
+			"details": err.Error(),
+		})
+	}
+
+	if err = ctx.BodyParser(data); err != nil { // TODO: FORM DATA
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "invalid request body",
+			"details": err.Error(),
+		})
+	}
+
+	if data.UserID == "" || data.ChatID == "" {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "user_id and chat_id are required",
+		})
+	}
+
+	resp, err := h.sendVoiceUC.Execute(ctx.Context(), data)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "failed to send voice message",
+			"details": err.Error(),
+		})
+	}
+
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{
+		"waveform": resp.Waveform,
+		"url":      resp.URL,
+	})
 }
 
 func (h *Handler) Save(ctx *fiber.Ctx) error {

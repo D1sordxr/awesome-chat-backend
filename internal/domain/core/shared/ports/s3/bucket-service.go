@@ -1,4 +1,4 @@
-package minio
+package s3
 
 import "context"
 

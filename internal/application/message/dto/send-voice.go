@@ -2,8 +2,9 @@ package dto
 
 type (
 	SendVoiceRequest struct {
-		Message
-		Blob     []byte `json:"blob"`
+		UserID   string `json:"user_id"`
+		ChatID   string `json:"chat_id"`
+		Blob     string `json:"blob"`
 		Duration int    `json:"duration"`
 	}
 	SendVoiceResponse struct {
