@@ -17,7 +17,7 @@ type Handler interface {
 type Worker struct {
 	log      ports.Logger
 	handlers []Handler
-	
+
 	errChan  chan error
 	isClosed atomic.Bool
 }

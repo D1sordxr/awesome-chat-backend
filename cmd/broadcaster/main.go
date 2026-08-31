@@ -6,7 +6,6 @@ import (
 	"awesome-chat/internal/infrastructure/ws/chathub/transport"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/exp/rand"
 	"golang.org/x/net/websocket"
 	"log"
 	"os"
@@ -106,7 +105,7 @@ func (c *WebSocketClient) sendMessage() error {
 
 	// Prepare operation DTO
 	operation := transport.OperationHeader{
-		ID:        rand.Int(),
+		ID:        c.counter,
 		Operation: consts.SendMessage.String(),
 		Body:      messageBytes,
 	}

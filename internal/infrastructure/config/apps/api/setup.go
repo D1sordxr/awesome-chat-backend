@@ -4,6 +4,7 @@ import (
 	"awesome-chat/internal/infrastructure/config/http"
 	"awesome-chat/internal/infrastructure/config/http/wsServerApi"
 	"awesome-chat/internal/infrastructure/config/jwt"
+	"awesome-chat/internal/infrastructure/config/minio"
 	"awesome-chat/internal/infrastructure/config/postgres"
 	"awesome-chat/internal/infrastructure/config/redis"
 	"os"
@@ -16,6 +17,8 @@ const basicConfigPath = "./configs/api/prod.yaml"
 type Config struct {
 	Storage          postgres.Config    `yaml:"storage"`
 	MessagePublisher redis.Config       `yaml:"message_publisher"`
+	Cache            redis.Config       `yaml:"cache"`
+	MinIO            minio.Config       `yaml:"minio"`
 	HTTPServer       http.Config        `yaml:"http"`
 	WSServerAPI      wsServerApi.Config `yaml:"ws_server_api"`
 	JWT              jwt.Config         `yaml:"jwt"`

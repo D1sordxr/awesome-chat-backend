@@ -49,6 +49,6 @@ func (t *TokenParserImpl) Do(tokenStr vo.JWTToken) (vo.IDClaims, vo.EmailClaims,
 		return "", "", fmt.Errorf("email claim missing or invalid")
 	}
 	t.log.Debug("ID claims received", "id", id)
-	
+
 	return vo.IDClaims(id), vo.EmailClaims(email), nil
 }

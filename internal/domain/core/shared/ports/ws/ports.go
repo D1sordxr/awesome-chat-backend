@@ -11,16 +11,6 @@ type Broadcaster interface {
 	Broadcast(ctx context.Context, message entity.OldMessage, payload []byte) error
 }
 
-type ConnManager interface {
-	HandleWebSocket(
-		w http.ResponseWriter,
-		r *http.Request,
-		header http.Header,
-		userID string,
-		initialChatIDs []string,
-	) error
-}
-
 type Upgrader interface {
 	HandleWebSocket(
 		ctx context.Context,

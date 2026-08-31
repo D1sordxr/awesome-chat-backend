@@ -4,10 +4,28 @@ import (
 	"awesome-chat/internal/application/message/dto"
 	"awesome-chat/internal/domain/core/message/ports/usecases"
 	"context"
+	"io"
+	"mime/multipart"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 )
+
+func readMultipartFile(header *multipart.FileHeader) (string, error) {
+	file, err := header.Open()
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = file.Close() }()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+}
 
 type (
 	saveUseCase interface {
@@ -60,7 +78,7 @@ func (h *Handler) SendVoice(ctx *fiber.Ctx) error {
 		data.Blob = ""
 	}()
 
-	blob, err := ctx.FormFile("audio")
+	header, err := ctx.FormFile("audio")
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "error reading file",
@@ -68,12 +86,18 @@ func (h *Handler) SendVoice(ctx *fiber.Ctx) error {
 		})
 	}
 
-	if err = ctx.BodyParser(data); err != nil { // TODO: FORM DATA
+	blob, err := readMultipartFile(header)
+	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "invalid request body",
+			"error":   "error reading file",
 			"details": err.Error(),
 		})
 	}
+
+	data.Blob = blob
+	data.UserID = ctx.FormValue("user_id")
+	data.ChatID = ctx.FormValue("chat_id")
+	data.Duration, _ = strconv.Atoi(ctx.FormValue("duration"))
 
 	if data.UserID == "" || data.ChatID == "" {
 		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{

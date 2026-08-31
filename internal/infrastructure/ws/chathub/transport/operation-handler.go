@@ -49,9 +49,8 @@ func (o *OperationHandler) Handle(
 		return chathub.ErrorResponse(func() string {
 			if opDTO.Operation != "" {
 				return opDTO.Operation
-			} else {
-				return "unknown"
 			}
+			return "unknown"
 		}(), fmt.Errorf("%s: %w", op, errors.ErrInvalidOpFormat))
 	}
 

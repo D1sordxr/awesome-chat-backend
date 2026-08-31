@@ -52,19 +52,19 @@ func NewApp(_ context.Context) *App {
 	wsOpHandler := transport.NewOperationHandler(log, wsSendMsgOpHandler)
 	wsClientManager.MustSetOperationHandler(wsOpHandler)
 
-	healthHttpHandler := ws.NewHealthHandler()
+	healthHTTPHandler := ws.NewHealthHandler()
 
 	authMid := middleware.NewAuthAsClient()
-	upgradeHttpHandler := ws.NewUpgradeHandler(wsClientManager, authMid)
+	upgradeHTTPHandler := ws.NewUpgradeHandler(wsClientManager, authMid)
 
-	broadcastHttpHandler := ws.NewBroadcastHandler(wsClientManager)
+	broadcastHTTPHandler := ws.NewBroadcastHandler(wsClientManager)
 
 	server := ginServer.NewServer(
 		log,
 		&cfg.HTTPServer,
-		upgradeHttpHandler,
-		broadcastHttpHandler,
-		healthHttpHandler,
+		upgradeHTTPHandler,
+		broadcastHTTPHandler,
+		healthHTTPHandler,
 	)
 
 	components := setupComponents(

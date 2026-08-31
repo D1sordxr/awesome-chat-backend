@@ -24,7 +24,16 @@ run:
 
 # Run all tests
 test:
-	go test ./...
+	go test -race -shuffle=on ./...
+
+# Build, vet and test the way CI does
+check: build-go vet test lint
+
+build-go:
+	go build ./...
+
+vet:
+	go vet ./...
 
 # Show logs from all services
 logs:

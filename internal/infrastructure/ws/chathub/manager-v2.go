@@ -25,7 +25,6 @@ type ClientManagerV2 struct {
 
 	opHandler operationHandler
 
-	mu       sync.RWMutex
 	wg       sync.WaitGroup
 	isClosed atomic.Bool
 }

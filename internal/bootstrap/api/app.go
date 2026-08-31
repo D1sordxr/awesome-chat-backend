@@ -9,6 +9,7 @@ import (
 	"awesome-chat/internal/application/message/useCases/getForChatWithFilter"
 	messageSave "awesome-chat/internal/application/message/useCases/save"
 	messageSend "awesome-chat/internal/application/message/useCases/send"
+	"awesome-chat/internal/application/message/useCases/sendVoice"
 	"awesome-chat/internal/application/user/useCases/authJWT"
 	"awesome-chat/internal/application/user/useCases/getAllUsers"
 	"awesome-chat/internal/application/user/useCases/getUserChatIDs"
@@ -19,23 +20,28 @@ import (
 	outboxEntity "awesome-chat/internal/domain/core/shared/outbox/services/entity"
 	"awesome-chat/internal/infrastructure/config/apps/api"
 	"awesome-chat/internal/infrastructure/jwt/user"
+	"awesome-chat/internal/infrastructure/minio"
+	"awesome-chat/internal/infrastructure/minio/services/bucket"
+	urlSvc "awesome-chat/internal/infrastructure/minio/services/url"
+	voiceStore "awesome-chat/internal/infrastructure/minio/storage/voice"
 	"awesome-chat/internal/infrastructure/postgres"
 	"awesome-chat/internal/infrastructure/postgres/executor"
 	repos "awesome-chat/internal/infrastructure/postgres/repositories"
 	chatStore "awesome-chat/internal/infrastructure/postgres/store/chat"
 	messageStore "awesome-chat/internal/infrastructure/postgres/store/message"
-	"awesome-chat/internal/infrastructure/postgres/store/message/getFunc"
 	userStore "awesome-chat/internal/infrastructure/postgres/store/user"
+	"awesome-chat/internal/infrastructure/redis"
+	cacheStorage "awesome-chat/internal/infrastructure/redis/storage"
 	fiberHttp "awesome-chat/internal/presentation/httpFiber"
 	chatHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/chat"
 	"awesome-chat/internal/presentation/httpFiber/delivery/handlers/health"
 	messageHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/message"
 	userHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/user"
 	"context"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/sync/errgroup"
 	"log/slog"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type App struct {
@@ -142,10 +148,24 @@ func NewApp(ctx context.Context) *App {
 		log,
 		messageGetForChatWithFilterStore,
 	)
-	messageGetFunc := getFunc.NewGetMessagesFunc(
-		func() *pgxpool.Pool {
-			return pool.Pool
-		},
+	minioConn := minio.NewConnection(cfg.MinIO)
+	cacheConn := redis.NewConnection(&cfg.Cache)
+
+	voiceBucket := bucket.Voices.String()
+	bucketSvc := bucket.NewService(log, minioConn)
+	voiceStorage := voiceStore.NewStorage(minioConn, voiceBucket, bucketSvc)
+	voiceURLSvc := urlSvc.NewURLService(
+		minioConn.Client,
+		voiceBucket,
+		cacheStorage.NewStorage(cacheConn, cacheStorage.Voice),
+	)
+
+	messageSendVoiceUC := sendVoice.NewMessageSendVoiceUseCase(
+		log,
+		txManager,
+		messageStore.NewSaveVoiceStore(txManager),
+		voiceStorage,
+		voiceURLSvc,
 	)
 
 	messageHandlers := messageHandler.NewMessageHandler(
@@ -154,7 +174,7 @@ func NewApp(ctx context.Context) *App {
 		messageSendUC,
 		messageSendSyncUC,
 		messageGetForChatWithFilter,
-		messageGetFunc,
+		messageSendVoiceUC,
 	)
 
 	srv := fiberHttp.NewServer(
@@ -168,6 +188,8 @@ func NewApp(ctx context.Context) *App {
 	components := setupComponents(
 		srv,
 		messageSendUC, // todo: rebuild
+		minioConn,
+		cacheConn,
 		pool,
 	)
 

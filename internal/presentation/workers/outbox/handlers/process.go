@@ -51,6 +51,11 @@ func (p *ProcessHandler) Start(ctx context.Context) error {
 	}
 }
 
+func (p *ProcessHandler) Stop(_ context.Context) error {
+	p.ticker.Stop()
+	return nil
+}
+
 func (p *ProcessHandler) processOutbox(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()

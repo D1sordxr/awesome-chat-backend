@@ -21,7 +21,7 @@ type Service struct {
 
 const defaultTTL = 15 * time.Minute
 
-func NewUrlService(
+func NewURLService(
 	minioClient *minio.Client,
 	bucketName string,
 	urlCache cachePort.Storage,

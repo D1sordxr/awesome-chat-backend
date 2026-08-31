@@ -4,7 +4,6 @@ import (
 	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/infrastructure/ws/chathub/consts"
 	"context"
-	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -256,13 +255,4 @@ func (c *Client) writePump(ctx context.Context) error {
 			// c.log.Debug("ping sent", "client_id", c.id)
 		}
 	}
-}
-
-func LocalIp() string {
-	conn, err := net.Dial("udp", "8.8.8.8:80")
-	if err != nil {
-		return ""
-	}
-	defer func() { _ = conn.Close() }()
-	return conn.LocalAddr().(*net.UDPAddr).IP.String()
 }
