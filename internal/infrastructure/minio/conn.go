@@ -1,7 +1,7 @@
 package minio
 
 import (
-	cfg "awesome-chat/internal/infrastructure/config/minio"
+	cfg "awesome-chat/internal/infrastructure/config/components/minio"
 	"context"
 	"fmt"
 	"github.com/minio/minio-go/v7"

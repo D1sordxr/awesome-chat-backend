@@ -1,24 +1,24 @@
-package worker
+package wsserver
 
 import (
 	"fmt"
 
-	"awesome-chat/internal/infrastructure/config/components/postgres"
+	"awesome-chat/internal/infrastructure/config/components/http"
 	"awesome-chat/internal/infrastructure/config/components/redis"
 	"awesome-chat/internal/infrastructure/config/loader"
 )
 
-const defaultConfigPath = "./configs/worker/prod.yaml"
+const defaultConfigPath = "./configs/ws-server/prod.yaml"
 
 type Config struct {
-	Storage          postgres.Config `yaml:"storage"`
-	StreamSubscriber redis.Config    `yaml:"stream_subscriber"`
+	HTTPServer http.Config  `yaml:"http"`
+	Redis      redis.Config `yaml:"redis"`
 }
 
 func NewConfig() (*Config, error) {
 	var cfg Config
 	if err := loader.Read(defaultConfigPath, &cfg); err != nil {
-		return nil, fmt.Errorf("worker config: %w", err)
+		return nil, fmt.Errorf("ws-server config: %w", err)
 	}
 	return &cfg, nil
 }

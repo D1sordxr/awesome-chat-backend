@@ -2,7 +2,7 @@ package kafka
 
 import (
 	"awesome-chat/internal/domain/core/shared/broker/entity"
-	cfg "awesome-chat/internal/infrastructure/config/kafka"
+	cfg "awesome-chat/internal/infrastructure/config/components/kafka"
 	"context"
 
 	"github.com/segmentio/kafka-go"

@@ -29,9 +29,13 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	cfg := worker.NewConfig()
-
 	log := logger.NewLogger()
+
+	cfg, err := worker.NewConfig()
+	if err != nil {
+		log.Error("Failed to load config", "error", err.Error())
+		os.Exit(1)
+	}
 
 	pool := postgres.NewPool(ctx, &cfg.Storage)
 	txManager := executor.NewTransactionManager(pool)
@@ -90,5 +94,8 @@ func main() {
 		mainWorker,
 	)
 
-	app.Run(ctx)
+	if err := app.Run(ctx); err != nil {
+		log.Error("App exited with error", "error", err.Error())
+		os.Exit(1)
+	}
 }

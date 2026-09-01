@@ -1,18 +1,23 @@
 package main
 
 import (
-	config "awesome-chat/internal/infrastructure/config/apps/topic-creator"
+	"os"
+
+	config "awesome-chat/internal/infrastructure/config/apps/topiccreator"
 	"awesome-chat/internal/infrastructure/kafka"
-	"log/slog"
+	"awesome-chat/internal/infrastructure/logger"
 )
 
 func main() {
-	log := slog.Default()
+	log := logger.NewLogger()
 
-	log.Info("Start parsing config...")
-	cfg := config.NewConfig()
+	cfg, err := config.NewConfig()
+	if err != nil {
+		log.Error("Failed to load config", "error", err.Error())
+		os.Exit(1)
+	}
 
-	log.Info("Attempting to create topic...")
+	log.Info("Attempting to create topic...", "topic", cfg.MessageBroker.Topic)
 	kafka.CreateTopic(&cfg.MessageBroker)
 	log.Info("Topic created successfully!")
 }

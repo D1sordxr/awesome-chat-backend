@@ -1,7 +1,7 @@
 package redis
 
 import (
-	cfg "awesome-chat/internal/infrastructure/config/redis"
+	cfg "awesome-chat/internal/infrastructure/config/components/redis"
 	"context"
 	"github.com/redis/go-redis/v9"
 	"time"
@@ -14,8 +14,8 @@ type Connection struct {
 func NewConnection(cfg *cfg.Config) *Connection {
 	return &Connection{
 		Client: redis.NewClient(&redis.Options{
-			Addr:         cfg.GetClientAddress(),
-			Password:     cfg.GetPassword(),
+			Addr:         cfg.ClientAddress,
+			Password:     cfg.Password,
 			DialTimeout:  5 * time.Second,
 			ReadTimeout:  3 * time.Second,
 			WriteTimeout: 3 * time.Second,

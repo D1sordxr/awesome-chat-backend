@@ -3,7 +3,7 @@ package kafka
 import (
 	"github.com/segmentio/kafka-go"
 
-	config "awesome-chat/internal/infrastructure/config/kafka"
+	config "awesome-chat/internal/infrastructure/config/components/kafka"
 )
 
 const (

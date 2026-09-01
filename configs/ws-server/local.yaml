@@ -1,5 +1,5 @@
 redis:
-  client_address: "redis:6379"
+  client_address: "localhost:6379"
   password: "awesome-password"
 
 http:

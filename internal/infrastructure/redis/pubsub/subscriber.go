@@ -1,7 +1,7 @@
 package pubsub
 
 import (
-	cfg "awesome-chat/internal/infrastructure/config/redis"
+	cfg "awesome-chat/internal/infrastructure/config/components/redis"
 	"context"
 	"errors"
 	"github.com/redis/go-redis/v9"
@@ -14,9 +14,9 @@ type Subscriber struct {
 
 func NewSubscriber(cfg *cfg.Config) *Subscriber {
 	return &Subscriber{
-		channel: cfg.GetChannel(),
+		channel: cfg.Channel,
 		client: redis.NewClient(&redis.Options{
-			Addr: cfg.GetClientAddress(),
+			Addr: cfg.ClientAddress,
 		}),
 	}
 }

@@ -1,7 +1,7 @@
 package pubsub
 
 import (
-	cfg "awesome-chat/internal/infrastructure/config/redis"
+	cfg "awesome-chat/internal/infrastructure/config/components/redis"
 	"context"
 	"github.com/redis/go-redis/v9"
 )
@@ -13,9 +13,9 @@ type Publisher struct {
 
 func NewPublisher(cfg *cfg.Config) *Publisher {
 	return &Publisher{
-		channel: cfg.GetChannel(),
+		channel: cfg.Channel,
 		client: redis.NewClient(&redis.Options{
-			Addr: cfg.GetClientAddress(),
+			Addr: cfg.ClientAddress,
 		}),
 	}
 }

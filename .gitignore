@@ -1,0 +1,13 @@
+/api
+/worker
+/ws-server
+/topic-creator
+/outbox-processor
+/broadcaster
+
+*.test
+*.out
+coverage.*
+
+.idea/
+minio/

@@ -2,7 +2,7 @@ package httpGin
 
 import (
 	"awesome-chat/internal/domain/app/ports"
-	cfg "awesome-chat/internal/infrastructure/config/http"
+	cfg "awesome-chat/internal/infrastructure/config/components/http"
 	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
@@ -37,6 +37,7 @@ func NewServer(
 			ReadHeaderTimeout: config.Timeout,
 			ReadTimeout:       config.Timeout,
 			WriteTimeout:      config.Timeout,
+			IdleTimeout:       config.IdleTimeout,
 		},
 		engine:   engine,
 		handlers: handlers,

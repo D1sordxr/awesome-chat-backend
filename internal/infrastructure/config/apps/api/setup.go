@@ -1,40 +1,38 @@
 package api
 
 import (
-	"awesome-chat/internal/infrastructure/config/http"
-	"awesome-chat/internal/infrastructure/config/http/wsServerApi"
-	"awesome-chat/internal/infrastructure/config/jwt"
-	"awesome-chat/internal/infrastructure/config/minio"
-	"awesome-chat/internal/infrastructure/config/postgres"
-	"awesome-chat/internal/infrastructure/config/redis"
+	"awesome-chat/internal/infrastructure/config/apps"
+	"fmt"
 	"os"
+	"strconv"
 
-	"github.com/ilyakaznacheev/cleanenv"
+	"awesome-chat/internal/infrastructure/config/components/http"
+	"awesome-chat/internal/infrastructure/config/components/jwt"
+	"awesome-chat/internal/infrastructure/config/components/minio"
+	"awesome-chat/internal/infrastructure/config/components/postgres"
+	"awesome-chat/internal/infrastructure/config/components/redis"
+	"awesome-chat/internal/infrastructure/config/components/wsserverapi"
+	"awesome-chat/internal/infrastructure/config/loader"
 )
 
-const basicConfigPath = "./configs/api/prod.yaml"
+const defaultConfigPath = "./configs/api/prod.yaml"
 
 type Config struct {
-	Storage          postgres.Config    `yaml:"storage"`
-	MessagePublisher redis.Config       `yaml:"message_publisher"`
-	Cache            redis.Config       `yaml:"cache"`
-	MinIO            minio.Config       `yaml:"minio"`
-	HTTPServer       http.Config        `yaml:"http"`
-	WSServerAPI      wsServerApi.Config `yaml:"ws_server_api"`
-	JWT              jwt.Config         `yaml:"jwt"`
+	Env         apps.AppEnv
+	Storage     postgres.Config    `yaml:"storage"`
+	Cache       redis.Config       `yaml:"cache"`
+	MinIO       minio.Config       `yaml:"minio"`
+	HTTPServer  http.Config        `yaml:"http"`
+	WSServerAPI wsserverapi.Config `yaml:"ws_server_api"`
+	JWT         jwt.Config         `yaml:"jwt"`
 }
 
-func NewConfig() *Config {
+func NewConfig() (*Config, error) {
+	env := os.Getenv("APP_ENV")
+	strconv.ParseInt(env, 10, 8)
 	var cfg Config
-
-	path := os.Getenv("CONFIG_PATH")
-	if path == "" {
-		path = basicConfigPath
+	if err := loader.Read(defaultConfigPath, &cfg); err != nil {
+		return nil, fmt.Errorf("api config: %w", err)
 	}
-
-	if err := cleanenv.ReadConfig(path, &cfg); err != nil {
-		panic("failed to read config: " + err.Error())
-	}
-
-	return &cfg
+	return &cfg, nil
 }

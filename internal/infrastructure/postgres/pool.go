@@ -1,7 +1,7 @@
 package postgres
 
 import (
-	"awesome-chat/internal/infrastructure/config/postgres"
+	"awesome-chat/internal/infrastructure/config/components/postgres"
 	"context"
 	"time"
 

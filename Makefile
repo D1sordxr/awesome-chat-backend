@@ -1,33 +1,10 @@
-# Build the application containers
-build:
-	docker-compose build
+SERVICES = api ws-server worker outbox-processor topic-creator
+IMAGE_TAG ?= dev
 
-# Start only the environment
-up:
-	docker-compose up -d
+.PHONY: run build-go vet test lint check images
 
-# Stop everything
-down:
-	docker-compose down
-
-# Restart the app container
-restart:
-	docker-compose restart app
-
-# Remove containers and volumes
-clean:
-	docker-compose down -v
-
-# Run the Go application locally (outside the container)
 run:
-	go run ./cmd/api/main.go
-
-# Run all tests
-test:
-	go test -race -shuffle=on ./...
-
-# Build, vet and test the way CI does
-check: build-go vet test lint
+	go run ./cmd/api
 
 build-go:
 	go build ./...
@@ -35,9 +12,16 @@ build-go:
 vet:
 	go vet ./...
 
-# Show logs from all services
-logs:
-	docker-compose logs -f --tail=100
+test:
+	go test -race -shuffle=on ./...
 
 lint:
 	golangci-lint run ./...
+
+check: build-go vet test lint
+
+images:
+	@for s in $(SERVICES); do \
+		echo "==> $$s"; \
+		docker build --build-arg SERVICE=$$s -t awesome-chat/$$s:$(IMAGE_TAG) . || exit 1; \
+	done

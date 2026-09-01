@@ -2,7 +2,7 @@ package kafka
 
 import (
 	"awesome-chat/internal/domain/core/shared/broker/entity"
-	cfg "awesome-chat/internal/infrastructure/config/kafka"
+	cfg "awesome-chat/internal/infrastructure/config/components/kafka"
 	"context"
 
 	"github.com/segmentio/kafka-go"
@@ -35,4 +35,9 @@ func (p *Producer) Publish(ctx context.Context, message entity.Message) error {
 
 func (p *Producer) Shutdown(_ context.Context) error {
 	return p.Writer.Close()
+}
+
+func (p *Producer) Start(ctx context.Context) error {
+	<-ctx.Done()
+	return nil
 }

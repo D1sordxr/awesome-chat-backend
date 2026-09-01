@@ -22,6 +22,9 @@ linters:
         text: "QF1008"
       - linters: [gosec]
         path: _test\.go
+      - linters: [gosec]
+        text: "G703"
+        path: internal/infrastructure/config/loader/
 
 issues:
   max-issues-per-linter: 100

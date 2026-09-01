@@ -1,0 +1,6 @@
+.git
+.idea
+Dockerfile
+.dockerignore
+*_test.go
+migrations

@@ -1,7 +1,7 @@
 package httpFiber
 
 import (
-	"awesome-chat/internal/infrastructure/config/http"
+	"awesome-chat/internal/infrastructure/config/components/http"
 	"context"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -22,8 +22,11 @@ type Server struct {
 }
 
 func NewServer(cfg *http.Config, handlers ...Handler) *Server {
-	app := fiber.New()
-	// fiber.Config{DisableStartupMessage: true}
+	app := fiber.New(fiber.Config{
+		ReadTimeout:  cfg.Timeout,
+		WriteTimeout: cfg.Timeout,
+		IdleTimeout:  cfg.IdleTimeout,
+	})
 
 	app.Use(cors.New(cors.Config{
 		AllowCredentials: true,

@@ -1,38 +1,27 @@
-# Build stage
-FROM golang:1.24-alpine AS builder
-WORKDIR /app
+FROM golang:1.27-alpine AS build
 
-# Copy dependency files first to leverage Docker cache
+RUN apk add --no-cache ca-certificates
+
+WORKDIR /src
+
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy the rest of the application
 COPY . .
 
-# Build all binaries
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/api ./cmd/api/main.go && \
-    CGO_ENABLED=0 GOOS=linux go build -o /app/worker ./cmd/worker/main.go && \
-    CGO_ENABLED=0 GOOS=linux go build -o /app/ws-server ./cmd/ws-server/main.go && \
-    CGO_ENABLED=0 GOOS=linux go build -o /app/topic-creator ./cmd/topic-creator/main.go
+ARG SERVICE
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/service ./cmd/${SERVICE}
 
-# Final lightweight image
-FROM alpine:3.18
+FROM scratch
 
-WORKDIR /app
+ARG SERVICE
 
-# Copy binaries from builder
-COPY --from=builder /app/api /app/api
-COPY --from=builder /app/worker /app/worker
-COPY --from=builder /app/ws-server /app/ws-server
-COPY --from=builder /app/topic-creator /app/topic-creator
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=build /out/service /service
+COPY configs/${SERVICE} /configs/${SERVICE}
 
-# Copy configs
-COPY --from=builder /app/configs ./configs
-COPY --from=builder /app/migrations ./migrations
+ENV CONFIG_PATH=/configs/${SERVICE}/prod.yaml
 
-# Create a non-root user and switch to it
-RUN addgroup -S appgroup && \
-    adduser -S appuser -G appgroup && \
-    chown -R appuser:appgroup /app
+USER 65532:65532
 
-USER appuser
+ENTRYPOINT ["/service"]

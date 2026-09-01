@@ -1,6 +1,8 @@
 module awesome-chat
 
-go 1.24
+go 1.27
+
+toolchain go1.27.0
 
 require (
 	github.com/fatih/color v1.18.0
