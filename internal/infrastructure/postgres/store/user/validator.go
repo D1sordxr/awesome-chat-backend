@@ -1,36 +1,33 @@
 package user
 
 import (
-	sharedPorts "awesome-chat/internal/domain/core/shared/ports"
-	userErrors "awesome-chat/internal/domain/core/user/errors"
-	"awesome-chat/internal/domain/core/user/ports"
-	"awesome-chat/internal/domain/core/user/vo"
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+
+	"awesome-chat/internal/domain/core/shared/ports"
+	userErrors "awesome-chat/internal/domain/core/user/errors"
 )
 
-var _ ports.UserValidatorStore = (*ValidatorStore)(nil)
-
 type ValidatorStore struct {
-	executor sharedPorts.ExecutorManager
+	executor ports.ExecutorManager
 }
 
-func NewValidatorStore(executor sharedPorts.ExecutorManager) *ValidatorStore {
+func NewValidatorStore(executor ports.ExecutorManager) *ValidatorStore {
 	return &ValidatorStore{executor: executor}
 }
 
-func (s *ValidatorStore) ValidateByID(ctx context.Context, userID vo.UserID) error {
+func (s *ValidatorStore) ValidateByID(ctx context.Context, userID uuid.UUID) error {
 	const op = "user.ValidatorStore.ValidateByID"
 
-	id := userID.ToUUID()
-	query := `
-	SELECT 1 FROM users WHERE id = $1;
-	`
+	query := `SELECT 1 FROM users WHERE id = $1`
 
 	var ok int
-	err := s.executor.GetPoolExecutor().QueryRow(ctx, query, id).Scan(&ok)
+	err := s.executor.GetPoolExecutor().QueryRow(ctx, query, userID).Scan(&ok)
+
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return fmt.Errorf("%w: %s", userErrors.ErrUserDoesNotExist, userID)
@@ -41,42 +38,20 @@ func (s *ValidatorStore) ValidateByID(ctx context.Context, userID vo.UserID) err
 	return nil
 }
 
-func (s *ValidatorStore) ValidateByEmail(ctx context.Context, email vo.Email) error {
-	const op = "user.ValidatorStore.ValidateByEmail"
-
-	emailStr := email.String()
-	query := `
-    SELECT 1 FROM users WHERE email = $1;
-    `
-
-	var ok int
-	err := s.executor.GetPoolExecutor().QueryRow(ctx, query, emailStr).Scan(&ok)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return fmt.Errorf("%w: %s", userErrors.ErrUserDoesNotExist, emailStr)
-	case err != nil:
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	return nil
-}
-
-func (s *ValidatorStore) ValidateMultiple(ctx context.Context, userIDs vo.UserIDs) error {
+func (s *ValidatorStore) ValidateMultiple(ctx context.Context, userIDs []uuid.UUID) error {
 	const op = "user.ValidatorStore.ValidateMultiple"
 
-	ids := userIDs.ToUUIDs()
-	query := `
-    SELECT COUNT(*) FROM users WHERE id = ANY($1);
-    `
+	query := `SELECT COUNT(*) FROM users WHERE id = ANY($1)`
 
 	var count int
-	err := s.executor.GetPoolExecutor().QueryRow(ctx, query, ids).Scan(&count)
+	err := s.executor.GetPoolExecutor().QueryRow(ctx, query, userIDs).Scan(&count)
+
 	switch {
 	case err != nil:
 		return fmt.Errorf("%s: %w", op, err)
-	case count != len(ids):
+	case count != len(userIDs):
 		return fmt.Errorf("%s: %w: expected %d, found %d",
-			op, userErrors.ErrNotAllUsersExist, len(ids), count,
+			op, userErrors.ErrNotAllUsersExist, len(userIDs), count,
 		)
 	}
 

@@ -1,12 +1,12 @@
 package message
 
 import (
+	"context"
+	"fmt"
+
 	"awesome-chat/internal/domain/core/message/entity"
 	"awesome-chat/internal/domain/core/message/vo"
 	"awesome-chat/internal/domain/core/shared/ports"
-	"context"
-	"fmt"
-	"strconv"
 )
 
 type GetForChatWithFilter struct {
@@ -17,38 +17,21 @@ func NewGetForChatWithFilter(executor ports.ExecutorManager) *GetForChatWithFilt
 	return &GetForChatWithFilter{executor: executor}
 }
 
-func (s *GetForChatWithFilter) Execute(
+func (s *GetForChatWithFilter) List(
 	ctx context.Context,
 	filter vo.ReadFilter,
 ) ([]entity.MessageForPreview, error) {
-	const op = "message.GetStore.GetByCursor"
+	const op = "message.GetForChatWithFilter.List"
 
-	if filter.Limit <= 0 {
-		filter.Limit = 100
-	}
-
-	baseQuery := `
-        SELECT 
+	query := `
+        SELECT
             id, user_id, content, created_at
-        FROM messages 
-        WHERE chat_id = $1
-    `
+        FROM messages
+        WHERE chat_id = $1 AND ($2 = 0 OR id < $2)
+        ORDER BY id DESC
+        LIMIT $3`
 
-	var args []interface{}
-	args = append(args, filter.ChatID)
-
-	cursorQuery := ""
-	if filter.Cursor > 0 {
-		cursorQuery = " AND id < $2"
-		args = append(args, filter.Cursor)
-	}
-
-	fullQuery := baseQuery + cursorQuery + `
-        ORDER BY created_at DESC
-        LIMIT $` + strconv.Itoa(len(args)+1)
-	args = append(args, filter.Limit)
-
-	rows, err := s.executor.GetPoolExecutor().Query(ctx, fullQuery, args...)
+	rows, err := s.executor.GetPoolExecutor().Query(ctx, query, filter.ChatID, filter.Cursor, filter.Limit)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -56,16 +39,17 @@ func (s *GetForChatWithFilter) Execute(
 
 	messages := make([]entity.MessageForPreview, 0, filter.Limit)
 	for rows.Next() {
-		var msg entity.MessageForPreview
+		var message entity.MessageForPreview
 		if err = rows.Scan(
-			&msg.ID,
-			&msg.SenderID,
-			&msg.Text,
-			&msg.Timestamp,
+			&message.ID,
+			&message.SenderID,
+			&message.Text,
+			&message.Timestamp,
 		); err != nil {
 			return nil, fmt.Errorf("%s: %w", op, err)
 		}
-		messages = append(messages, msg)
+
+		messages = append(messages, message)
 	}
 
 	if err = rows.Err(); err != nil {

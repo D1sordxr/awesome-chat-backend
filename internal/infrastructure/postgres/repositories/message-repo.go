@@ -18,26 +18,6 @@ func NewMessageRepo(e ports.ExecutorManager) *MessageRepo {
 	return &MessageRepo{e: e}
 }
 
-func (r *MessageRepo) Save(ctx context.Context, message entity.OldMessage) error {
-	executor := r.e.GetExecutor(ctx)
-	query := `
-		INSERT INTO messages (
-			user_id,
-			chat_id,
-			content
-		) VALUES ($1, $2, $3)`
-
-	if _, err := executor.Exec(ctx, query,
-		message.UserID,
-		message.ChatID,
-		message.Content,
-	); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (r *MessageRepo) SaveBatch(ctx context.Context, messages []entity.Message) error {
 	const op = "repositories.MessageRepo.SaveBatch"
 
@@ -101,4 +81,28 @@ func (r *MessageRepo) SaveBatchFast(ctx context.Context, messages []entity.Messa
 	}
 
 	return tx.Commit(ctx)
+}
+
+func (r *MessageRepo) Save(ctx context.Context, message entity.Message) (entity.Message, error) {
+	const op = "repositories.MessageRepo.Save"
+
+	query := `
+		INSERT INTO messages (
+			user_id,
+			chat_id,
+			content
+		) VALUES ($1, $2, $3)
+		RETURNING id, created_at`
+
+	saved := message
+
+	if err := r.e.GetExecutor(ctx).QueryRow(ctx, query,
+		message.UserID,
+		message.ChatID,
+		message.Content,
+	).Scan(&saved.ID, &saved.Timestamp); err != nil {
+		return entity.Message{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return saved, nil
 }

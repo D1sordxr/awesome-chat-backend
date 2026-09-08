@@ -1,10 +1,12 @@
 package message
 
 import (
-	"awesome-chat/internal/domain/core/message/vo"
-	"awesome-chat/internal/domain/core/shared/ports"
 	"context"
 	"fmt"
+
+	"awesome-chat/internal/domain/core/message/entity"
+	"awesome-chat/internal/domain/core/message/vo"
+	"awesome-chat/internal/domain/core/shared/ports"
 )
 
 type SaveVoiceStore struct {
@@ -15,28 +17,29 @@ func NewSaveVoiceStore(executor ports.ExecutorManager) *SaveVoiceStore {
 	return &SaveVoiceStore{executor: executor}
 }
 
-func (s *SaveVoiceStore) Execute(ctx context.Context, data vo.SaveVoiceData) error {
-	const op = "message.SaveVoiceStore.Execute"
+func (s *SaveVoiceStore) SaveVoice(ctx context.Context, data vo.SaveVoiceData) (entity.Message, error) {
+	const op = "message.SaveVoiceStore.SaveVoice"
 
 	tx, err := s.executor.GetTxExecutor(ctx)
 	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
+		return entity.Message{}, fmt.Errorf("%s: %w", op, err)
 	}
 
 	messageQuery := `
 		INSERT INTO messages (
-			user_id, 
-			chat_id, 
-			message_type,
-			content
-		) VALUES ($1, $2, 'voice', $3)
-		RETURNING id
-	`
+			user_id,
+			chat_id,
+			message_type
+		) VALUES ($1, $2, 'voice')
+		RETURNING id, created_at`
 
-	var messageID int64
-	err = tx.QueryRow(ctx, messageQuery, data.UserID, data.ChatID, data.AudioURL).Scan(&messageID)
-	if err != nil {
-		return fmt.Errorf("%s: failed to insert message: %w", op, err)
+	saved := entity.Message{UserID: data.UserID, ChatID: data.ChatID}
+
+	if err = tx.QueryRow(ctx, messageQuery, data.UserID, data.ChatID).Scan(
+		&saved.ID,
+		&saved.Timestamp,
+	); err != nil {
+		return entity.Message{}, fmt.Errorf("%s: insert message: %w", op, err)
 	}
 
 	voiceQuery := `
@@ -45,13 +48,18 @@ func (s *SaveVoiceStore) Execute(ctx context.Context, data vo.SaveVoiceData) err
 			object_key,
 			duration_seconds,
 			waveform
-		) VALUES ($1, $2, $3, $4)
-	`
+		) VALUES ($1, $2, $3, $4)`
 
-	_, err = tx.Exec(ctx, voiceQuery, messageID, data.AudioURL, data.Duration, data.Waveform)
-	if err != nil {
-		return fmt.Errorf("%s: failed to insert voice message: %w", op, err)
+	if _, err = tx.Exec(
+		ctx,
+		voiceQuery,
+		saved.ID,
+		data.ObjectKey,
+		data.DurationSeconds,
+		data.Waveform,
+	); err != nil {
+		return entity.Message{}, fmt.Errorf("%s: insert voice message: %w", op, err)
 	}
 
-	return nil
+	return saved, nil
 }

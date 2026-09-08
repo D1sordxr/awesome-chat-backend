@@ -18,14 +18,14 @@ func NewGetUserChatPreviewStore(executor ports.ExecutorManager) *GetUserChatPrev
 	return &GetUserChatPreviewStore{executor: executor}
 }
 
-func (s *GetUserChatPreviewStore) SetupChatPreviews(
+func (s *GetUserChatPreviewStore) Previews(
 	ctx context.Context,
 	userID uuid.UUID,
 ) (
 	previews []entity.ChatPreview,
 	err error,
 ) {
-	const op = "chat.GetUserChatPreviewStore.SetupChatPreviews"
+	const op = "chat.GetUserChatPreviewStore.Previews"
 
 	conn := s.executor.GetExecutor(ctx)
 	query := `
@@ -142,11 +142,11 @@ func (s *GetUserChatPreviewStore) ParticipantsForChat(
 	return ps, nil
 }
 
-func (s *GetUserChatPreviewStore) BatchParticipantsForChats(
+func (s *GetUserChatPreviewStore) BatchParticipants(
 	ctx context.Context,
 	chatIDs []uuid.UUID,
 ) (map[uuid.UUID][]entity.Participant, error) {
-	const op = "chat.GetUserChatPreviewStore.BatchParticipantsForChats"
+	const op = "chat.GetUserChatPreviewStore.BatchParticipants"
 
 	query := `
         SELECT 

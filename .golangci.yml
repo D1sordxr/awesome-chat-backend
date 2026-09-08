@@ -25,6 +25,12 @@ linters:
       - linters: [gosec]
         text: "G703"
         path: internal/infrastructure/config/loader/
+      - linters: [gosec]
+        text: "G124"
+        path: internal/transport/gateway/
+      - linters: [revive]
+        text: "var-naming"
+        path: internal/transport/grpc/handler/
 
 issues:
   max-issues-per-linter: 100

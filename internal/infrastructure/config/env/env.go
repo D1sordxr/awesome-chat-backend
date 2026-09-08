@@ -142,6 +142,14 @@ func (l *Loader) StringSlice(key, separator string) []string {
 	return values
 }
 
+func (l *Loader) StringSliceDefault(key, separator string, fallback []string) []string {
+	if _, ok := l.lookup(key); !ok {
+		return fallback
+	}
+
+	return l.StringSlice(key, separator)
+}
+
 func (l *Loader) Custom(key string, parse func(string) error) {
 	raw, ok := l.lookup(key)
 	if !ok {

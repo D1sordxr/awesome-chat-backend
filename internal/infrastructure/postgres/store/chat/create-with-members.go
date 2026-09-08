@@ -6,9 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"awesome-chat/internal/domain/core/chat/vo"
 	"awesome-chat/internal/domain/core/shared/ports"
-	userVO "awesome-chat/internal/domain/core/user/vo"
 )
 
 type CreateWithMembersStore struct {
@@ -19,23 +17,22 @@ func NewCreateWithMembersStore(e ports.ExecutorManager) *CreateWithMembersStore 
 	return &CreateWithMembersStore{executor: e}
 }
 
-func (s *CreateWithMembersStore) CreateChat(
+func (s *CreateWithMembersStore) Create(
 	ctx context.Context,
-	chatID vo.ChatID,
+	chatID uuid.UUID,
 	chatName string,
 ) error {
-	const op = "CreateWithMembersStore.CreateChat"
+	const op = "CreateWithMembersStore.Create"
 
 	query := "INSERT INTO chats (id, chat_name) VALUES ($1, $2)"
 
-	id := chatID.ToUUID()
 	conn, err := s.executor.GetTxExecutor(ctx)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	if _, err = conn.Exec(ctx, query, id, chatName); err != nil {
-		return err
+	if _, err = conn.Exec(ctx, query, chatID, chatName); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil
@@ -43,8 +40,8 @@ func (s *CreateWithMembersStore) CreateChat(
 
 func (s *CreateWithMembersStore) AddMembers(
 	ctx context.Context,
-	chatID vo.ChatID,
-	memberIDs userVO.UserIDs,
+	chatID uuid.UUID,
+	memberIDs []uuid.UUID,
 ) error {
 	const op = "CreateWithMembersStore.AddMembers"
 	query := `
@@ -58,10 +55,7 @@ func (s *CreateWithMembersStore) AddMembers(
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
-	chatUUID := chatID.ToUUID()
-	memberUUIDs := memberIDs.ToUUIDs()
-
-	if _, err = conn.Exec(ctx, query, chatUUID, memberUUIDs); err != nil {
+	if _, err = conn.Exec(ctx, query, chatID, memberIDs); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 
@@ -69,11 +63,12 @@ func (s *CreateWithMembersStore) AddMembers(
 }
 
 func (s *CreateWithMembersStore) AddMember(ctx context.Context, chatID uuid.UUID, memberID uuid.UUID) error {
-	conn := s.executor.GetExecutor(ctx)
+	const op = "CreateWithMembersStore.AddMember"
+
 	query := "INSERT INTO user_chats (user_id, chat_id) VALUES ($1, $2)"
 
-	if _, err := conn.Exec(ctx, query, memberID, chatID); err != nil {
-		return err
+	if _, err := s.executor.GetExecutor(ctx).Exec(ctx, query, memberID, chatID); err != nil {
+		return fmt.Errorf("%s: %w", op, err)
 	}
 
 	return nil

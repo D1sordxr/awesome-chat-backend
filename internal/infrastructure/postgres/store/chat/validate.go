@@ -18,7 +18,7 @@ func NewValidatorStore(executor ports.ExecutorManager) *ValidatorStore {
 	return &ValidatorStore{executor: executor}
 }
 
-func (v *ValidatorStore) ValidateExists(ctx context.Context, id uuid.UUID) error {
+func (v *ValidatorStore) Exists(ctx context.Context, id uuid.UUID) error {
 	conn := v.executor.GetPoolExecutor()
 	query := `SELECT 1 FROM chats WHERE id = $1 LIMIT 1;`
 

@@ -1,14 +1,15 @@
 package user
 
 import (
-	"awesome-chat/internal/domain/core/shared/ports"
-	"awesome-chat/internal/domain/core/user/entity"
-	userErrors "awesome-chat/internal/domain/core/user/errors"
-	"awesome-chat/internal/domain/core/user/vo"
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/jackc/pgx/v5"
+
+	"awesome-chat/internal/domain/core/shared/ports"
+	"awesome-chat/internal/domain/core/user/entity"
+	userErrors "awesome-chat/internal/domain/core/user/errors"
 )
 
 type ProviderStore struct {
@@ -19,34 +20,16 @@ func NewProviderStore(executor ports.ExecutorManager) *ProviderStore {
 	return &ProviderStore{executor: executor}
 }
 
-func (s *ProviderStore) Get(ctx context.Context, email string) (entity.User, error) {
-	const op = "postgres.UserProviderStore.Get"
+func (s *ProviderStore) ByEmail(ctx context.Context, email string) (entity.User, error) {
+	const op = "user.ProviderStore.ByEmail"
 
-	query := `SELECT 
-		id,
-		email,
-		password,
-		username,
-		created_at,
-		updated_at       			
-	FROM users 
+	query := `
+	SELECT
+		id, email, password, username, created_at, updated_at
+	FROM users
 	WHERE email = $1`
 
-	conn := s.executor.GetPoolExecutor()
-
-	row := conn.QueryRow(ctx, query, email)
-
-	var user entity.User
-	var userEmail string
-	err := row.Scan(
-		&user.UserID,
-		&userEmail,
-		&user.Password,
-		&user.Username,
-		&user.CreatedAt,
-		&user.UpdatedAt,
-	)
-	user.Email = vo.Email(userEmail)
+	user, err := scanUser(s.executor.GetPoolExecutor().QueryRow(ctx, query, email))
 
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):

@@ -6,7 +6,7 @@ import (
 )
 
 type Message struct {
-	ID        int       `json:"id"`
+	ID        int64     `json:"id"`
 	UserID    uuid.UUID `json:"user_id"`
 	ChatID    uuid.UUID `json:"chat_id"`
 	Content   string    `json:"content"`
@@ -21,7 +21,7 @@ type OldMessage struct {
 }
 
 type MessageForPreview struct {
-	ID        int       `json:"id"`
+	ID        int64     `json:"id"`
 	SenderID  uuid.UUID `json:"sender_id"`
 	Text      string    `json:"text"`
 	Timestamp time.Time `json:"timestamp"`

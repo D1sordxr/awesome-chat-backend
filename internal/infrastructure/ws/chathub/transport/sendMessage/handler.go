@@ -2,7 +2,6 @@ package sendMessage
 
 import (
 	"awesome-chat/internal/application/message/dto"
-	"awesome-chat/internal/domain/core/message/ports/usecases"
 	"awesome-chat/internal/infrastructure/ws/chathub"
 	"awesome-chat/internal/infrastructure/ws/chathub/consts"
 	"awesome-chat/internal/infrastructure/ws/chathub/transport"
@@ -11,12 +10,16 @@ import (
 	"fmt"
 )
 
-type Handler struct {
-	opType consts.OperationType
-	uc     usecases.MessageBroadcastWithPub
+type broadcastUseCase interface {
+	Execute(ctx context.Context, req dto.BroadcastWithPubRequest) error
 }
 
-func New(uc usecases.MessageBroadcastWithPub) *Handler {
+type Handler struct {
+	opType consts.OperationType
+	uc     broadcastUseCase
+}
+
+func New(uc broadcastUseCase) *Handler {
 	return &Handler{
 		opType: consts.SendMessage,
 		uc:     uc,

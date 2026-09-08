@@ -4,35 +4,39 @@ import (
 	"fmt"
 
 	"awesome-chat/internal/infrastructure/config/apps"
+	"awesome-chat/internal/infrastructure/config/components/cookie"
+	"awesome-chat/internal/infrastructure/config/components/grpcserver"
 	"awesome-chat/internal/infrastructure/config/components/http"
 	"awesome-chat/internal/infrastructure/config/components/jwt"
 	"awesome-chat/internal/infrastructure/config/components/minio"
 	"awesome-chat/internal/infrastructure/config/components/postgres"
-	"awesome-chat/internal/infrastructure/config/components/redis"
-	"awesome-chat/internal/infrastructure/config/components/wsserverapi"
 	"awesome-chat/internal/infrastructure/config/env"
 )
 
 type Config struct {
-	Env         apps.AppEnv
-	Storage     postgres.Config
-	Cache       redis.Config
-	MinIO       minio.Config
-	HTTPServer  http.Config
-	WSServerAPI wsserverapi.Config
-	JWT         jwt.Config
+	Env        apps.AppEnv
+	Storage    postgres.Config
+	MinIO      minio.Config
+	HTTPServer http.Config
+	GRPCServer grpcserver.Config
+	Cookie     cookie.Config
+	JWT        jwt.Config
+
+	AllowedOrigins []string
 }
 
 func NewConfig() (*Config, error) {
 	l := env.NewLoader()
 
 	cfg := Config{
-		Storage:     postgres.NewConfig(l),
-		Cache:       redis.NewConfig(l),
-		MinIO:       minio.NewConfig(l),
-		HTTPServer:  http.NewConfig(l),
-		WSServerAPI: wsserverapi.NewConfig(l),
-		JWT:         jwt.NewConfig(l),
+		Storage:    postgres.NewConfig(l),
+		MinIO:      minio.NewConfig(l),
+		HTTPServer: http.NewConfig(l),
+		GRPCServer: grpcserver.NewConfig(l),
+		Cookie:     cookie.NewConfig(l),
+		JWT:        jwt.NewConfig(l),
+
+		AllowedOrigins: l.StringSliceDefault("HTTP_ALLOWED_ORIGINS", ",", []string{"http://localhost:3000"}),
 	}
 
 	l.Custom("APP_ENV", func(raw string) error {

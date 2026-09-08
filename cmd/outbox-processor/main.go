@@ -16,8 +16,8 @@ import (
 	"awesome-chat/internal/infrastructure/postgres"
 	"awesome-chat/internal/infrastructure/postgres/executor"
 	outboxStores "awesome-chat/internal/infrastructure/postgres/store/outbox"
-	"awesome-chat/internal/presentation/workers"
-	"awesome-chat/internal/presentation/workers/outbox/handlers"
+	"awesome-chat/internal/transport/worker"
+	"awesome-chat/internal/transport/worker/outbox"
 )
 
 const outboxBatchLimit = 10
@@ -44,7 +44,7 @@ func main() {
 		producer,
 	)
 
-	processHandler := handlers.NewHandler(log, processUC, filters.GetOutbox{
+	processHandler := outbox.NewHandler(log, processUC, filters.GetOutbox{
 		EntityName: vo.MessageEntity,
 		Status:     vo.StatusPending,
 		Limit:      outboxBatchLimit,
@@ -54,7 +54,7 @@ func main() {
 		log,
 		pool,
 		producer,
-		workers.NewWorker(log, processHandler),
+		worker.NewWorker(log, processHandler),
 	)
 
 	if err := app.Run(ctx); err != nil {

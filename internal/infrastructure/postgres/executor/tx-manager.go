@@ -140,3 +140,18 @@ func (m *TransactionManager) GetBatchExecutor(ctx context.Context) (ports.Execut
 func (m *TransactionManager) GetPool() *pgxpool.Pool {
 	return m.Pool.Pool
 }
+
+func (m *TransactionManager) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	txCtx, err := m.BeginAndInjectTx(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err = fn(txCtx); err != nil {
+		_ = m.RollbackTx(txCtx)
+
+		return err
+	}
+
+	return m.CommitTx(txCtx)
+}

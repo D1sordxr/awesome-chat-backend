@@ -8,7 +8,7 @@ import (
 
 	"awesome-chat/internal/bootstrap"
 	"awesome-chat/internal/domain/core/message/vo"
-	"awesome-chat/internal/infrastructure/config/apps/worker"
+	workerCfg "awesome-chat/internal/infrastructure/config/apps/worker"
 	"awesome-chat/internal/infrastructure/logger"
 	"awesome-chat/internal/infrastructure/messagePipe"
 	"awesome-chat/internal/infrastructure/postgres"
@@ -16,10 +16,10 @@ import (
 	"awesome-chat/internal/infrastructure/postgres/store/message"
 	"awesome-chat/internal/infrastructure/redis"
 	"awesome-chat/internal/infrastructure/redis/stream"
-	"awesome-chat/internal/presentation/workers"
-	"awesome-chat/internal/presentation/workers/message/handlers/acknowledger"
-	"awesome-chat/internal/presentation/workers/message/handlers/batchSaver"
-	"awesome-chat/internal/presentation/workers/message/handlers/streamSubscriber"
+	"awesome-chat/internal/transport/worker"
+	"awesome-chat/internal/transport/worker/message/acknowledger"
+	"awesome-chat/internal/transport/worker/message/saver"
+	"awesome-chat/internal/transport/worker/message/subscriber"
 
 	streamNames "awesome-chat/internal/infrastructure/redis/stream/names"
 	redisLib "github.com/redis/go-redis/v9"
@@ -31,7 +31,7 @@ func main() {
 
 	log := logger.NewLogger()
 
-	cfg, err := worker.NewConfig()
+	cfg, err := workerCfg.NewConfig()
 	if err != nil {
 		log.Error("Failed to load config", "error", err.Error())
 		os.Exit(1)
@@ -64,20 +64,20 @@ func main() {
 		messageStreamSubscriber,
 		messageAckPipeTx,
 	)
-	messageSaverHandler := batchSaver.NewHandler(
+	messageSaverHandler := saver.NewHandler(
 		log,
 		messageAckPipe,
 		messageSaverPipe,
 		messageSaveFromStreamStore,
 		messageAckPipeTx,
 	)
-	messageReaderHandler := streamSubscriber.NewHandler(
+	messageReaderHandler := subscriber.NewHandler(
 		log,
 		messageStreamPipe,
 		messageSaverPipe,
 	)
 
-	mainWorker := workers.NewWorker(
+	mainWorker := worker.NewWorker(
 		log,
 		messageAckHandler,
 		messageSaverHandler,

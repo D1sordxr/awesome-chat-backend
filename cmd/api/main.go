@@ -6,43 +6,33 @@ import (
 	"os/signal"
 	"syscall"
 
-	chatAddMember "awesome-chat/internal/application/chat/useCases/addMember"
-	chatCreate "awesome-chat/internal/application/chat/useCases/create"
-	"awesome-chat/internal/application/chat/useCases/getAllMessages"
-	"awesome-chat/internal/application/chat/useCases/getUserChatPreview"
-	messageGet "awesome-chat/internal/application/message/useCases/get"
-	"awesome-chat/internal/application/message/useCases/getForChatWithFilter"
-	messageSave "awesome-chat/internal/application/message/useCases/save"
-	messageSend "awesome-chat/internal/application/message/useCases/send"
-	"awesome-chat/internal/application/message/useCases/sendVoice"
-	"awesome-chat/internal/application/user/useCases/authJWT"
-	"awesome-chat/internal/application/user/useCases/getAllUsers"
-	"awesome-chat/internal/application/user/useCases/getUserChatIDs"
-	"awesome-chat/internal/application/user/useCases/login"
-	"awesome-chat/internal/application/user/useCases/register"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	v1 "github.com/D1sordxr/awesome-chat-proto/gen/go/awesomechat/v1"
+
+	chatApp "awesome-chat/internal/application/chat"
+	messageApp "awesome-chat/internal/application/message"
+	userApp "awesome-chat/internal/application/user"
 	"awesome-chat/internal/bootstrap"
-	msgEntity "awesome-chat/internal/domain/core/message/services/entity"
-	outboxEntity "awesome-chat/internal/domain/core/shared/outbox/services/entity"
 	"awesome-chat/internal/infrastructure/config/apps/api"
-	"awesome-chat/internal/infrastructure/jwt/user"
+	jwtUser "awesome-chat/internal/infrastructure/jwt/user"
 	"awesome-chat/internal/infrastructure/logger"
 	"awesome-chat/internal/infrastructure/minio"
 	"awesome-chat/internal/infrastructure/minio/services/bucket"
-	urlSvc "awesome-chat/internal/infrastructure/minio/services/url"
-	voiceStore "awesome-chat/internal/infrastructure/minio/storage/voice"
+	"awesome-chat/internal/infrastructure/minio/services/upload"
 	"awesome-chat/internal/infrastructure/postgres"
 	"awesome-chat/internal/infrastructure/postgres/executor"
 	repos "awesome-chat/internal/infrastructure/postgres/repositories"
 	chatStore "awesome-chat/internal/infrastructure/postgres/store/chat"
 	messageStore "awesome-chat/internal/infrastructure/postgres/store/message"
 	userStore "awesome-chat/internal/infrastructure/postgres/store/user"
-	"awesome-chat/internal/infrastructure/redis"
-	cacheStorage "awesome-chat/internal/infrastructure/redis/storage"
-	fiberHTTP "awesome-chat/internal/presentation/httpFiber"
-	chatHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/chat"
-	"awesome-chat/internal/presentation/httpFiber/delivery/handlers/health"
-	messageHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/message"
-	userHandler "awesome-chat/internal/presentation/httpFiber/delivery/handlers/user"
+	"awesome-chat/internal/transport/gateway"
+	grpcTransport "awesome-chat/internal/transport/grpc"
+	chatHandler "awesome-chat/internal/transport/grpc/handler/chat"
+	messageHandler "awesome-chat/internal/transport/grpc/handler/message"
+	userHandler "awesome-chat/internal/transport/grpc/handler/user"
+	"awesome-chat/internal/transport/grpc/interceptor"
 )
 
 func main() {
@@ -60,86 +50,90 @@ func main() {
 	pool := postgres.NewPool(ctx, &cfg.Storage)
 	txManager := executor.NewTransactionManager(pool)
 	minioConn := minio.NewConnection(cfg.MinIO)
-	cacheConn := redis.NewConnection(&cfg.Cache)
 
-	userTokenCreator := user.NewTokenCreator(cfg.JWT.SecretKey)
-	userTokenParser := user.NewTokenParser(log, cfg.JWT.SecretKey)
+	userUseCase := userApp.NewUseCaseWithTracing(userApp.NewUseCase(
+		repos.NewUserRepo(txManager),
+		userStore.NewProviderStore(txManager),
+		userStore.NewGetStore(txManager),
+		userStore.NewGetChatIDsStore(txManager),
+		jwtUser.NewTokenCreator(cfg.JWT.SecretKey),
+	))
 
-	userRepo := repos.NewUserRepo(txManager)
-	userGetStore := userStore.NewGetStore(txManager)
-	userProviderStore := userStore.NewProviderStore(txManager)
-	userGetChatIDsStore := userStore.NewGetChatIDsStore(txManager)
-	userValidatorStore := userStore.NewValidatorStore(txManager)
-
-	userHandlers := userHandler.NewUserHandler(
-		register.NewUserRegisterUseCase(log, userRepo),
-		login.NewUserLoginUseCase(log, userProviderStore, userTokenCreator),
-		authJWT.NewUserAuthJWTUseCase(log, userTokenParser, userProviderStore),
-		getUserChatIDs.NewUserGetChatIDsUseCase(userGetChatIDsStore),
-		getAllUsers.NewUsersGetAllUseCase(log, userGetStore),
-	)
-
-	chatCreateWithMembersStore := chatStore.NewCreateWithMembersStore(txManager)
-	chatValidatorStore := chatStore.NewValidatorStore(txManager)
-
-	chatHandlers := chatHandler.NewChatHandler(
-		chatCreate.NewChatCreateUseCase(log, txManager, chatCreateWithMembersStore, userValidatorStore),
-		chatAddMember.NewChatAddMemberUseCase(chatCreateWithMembersStore, chatValidatorStore, userValidatorStore),
-		getUserChatPreview.NewChatGetUserChatPreviewUseCase(log, chatStore.NewGetUserChatPreviewStore(txManager)),
-		getAllMessages.NewChatGetAllMessagesUseCase(log, chatStore.NewGetAllMessagesStore(txManager)),
-	)
-
-	messageEntityCreator := new(msgEntity.Create)
-	messageRepo := repos.NewMessageRepo(txManager)
-
-	messageSendUC := messageSend.NewUseCase( // TODO: rebuild
-		messageEntityCreator,
-		new(outboxEntity.Create),
+	chatUseCase := chatApp.NewUseCaseWithTracing(chatApp.NewUseCase(
+		chatStore.NewCreateWithMembersStore(txManager),
+		chatStore.NewValidatorStore(txManager),
+		userStore.NewValidatorStore(txManager),
+		chatStore.NewGetUserChatPreviewStore(txManager),
 		txManager,
-		messageRepo,
+	))
+
+	messageUseCase := messageApp.NewUseCaseWithTracing(messageApp.NewUseCase(
+		repos.NewMessageRepo(txManager),
+		messageStore.NewSaveVoiceStore(txManager),
 		repos.NewOutboxRepo(txManager),
+		messageStore.NewGetForChatWithFilter(txManager),
+		upload.NewService(minioConn.Client, bucket.Voices.String()),
+		chatStore.NewValidatorStore(txManager),
+		txManager,
+	))
+
+	users := userHandler.NewHandlerWithTracing(userHandler.NewHandler(userUseCase))
+	chats := chatHandler.NewHandlerWithTracing(chatHandler.NewHandler(chatUseCase))
+	messages := messageHandler.NewHandlerWithTracing(messageHandler.NewHandler(messageUseCase))
+
+	grpcLogger := interceptor.NewLogger(log)
+	grpcErrors := interceptor.NewError(log)
+	auth := interceptor.NewAuth(
+		jwtUser.NewTokenParser(log, cfg.JWT.SecretKey),
+		interceptor.PublicMethods...,
 	)
 
-	voiceBucket := bucket.Voices.String()
-	bucketSvc := bucket.NewService(log, minioConn)
-
-	messageHandlers := messageHandler.NewMessageHandler(
-		messageGet.NewMessageGetUseCase(messageStore.NewGetStore(txManager)),
-		messageSave.NewMessageSaveUseCase(messageEntityCreator, messageRepo),
-		messageSendUC,
-		messageSend.NewMessageSendSyncUseCase(messageRepo, messageEntityCreator, cfg.WSServerAPI.BroadcastURL),
-		getForChatWithFilter.NewMessageGetForChatWithFilterUseCase(log, messageStore.NewGetForChatWithFilter(txManager)),
-		sendVoice.NewMessageSendVoiceUseCase(
-			log,
-			txManager,
-			messageStore.NewSaveVoiceStore(txManager),
-			voiceStore.NewStorage(minioConn, voiceBucket, bucketSvc),
-			urlSvc.NewURLService(
-				minioConn.Client,
-				voiceBucket,
-				cacheStorage.NewStorage(cacheConn, cacheStorage.Voice),
-			),
-		),
+	grpcServer := grpcTransport.NewServer(
+		log,
+		cfg.GRPCServer,
+		[]grpc.UnaryServerInterceptor{grpcLogger.Unary(), grpcErrors.Unary(), auth.Unary()},
+		func(server grpc.ServiceRegistrar) { v1.RegisterUserServiceServer(server, users) },
+		func(server grpc.ServiceRegistrar) { v1.RegisterChatServiceServer(server, chats) },
+		func(server grpc.ServiceRegistrar) { v1.RegisterMessageServiceServer(server, messages) },
 	)
 
-	srv := fiberHTTP.NewServer(
+	conn, err := grpc.NewClient(
+		cfg.GRPCServer.LoopbackAddress(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Error("Failed to dial gRPC server", "error", err.Error())
+		os.Exit(1)
+	}
+	defer func() { _ = conn.Close() }()
+
+	httpGateway, err := gateway.NewServer(
+		ctx,
+		log,
 		&cfg.HTTPServer,
-		new(health.Handler),
-		chatHandlers,
-		userHandlers,
-		messageHandlers,
+		gateway.Options{
+			AllowedOrigins: cfg.AllowedOrigins,
+			Cookie:         cfg.Cookie,
+		},
+		conn,
+		v1.RegisterUserServiceHandler,
+		v1.RegisterChatServiceHandler,
+		v1.RegisterMessageServiceHandler,
 	)
+	if err != nil {
+		log.Error("Failed to build HTTP gateway", "error", err.Error())
+		os.Exit(1)
+	}
 
 	app := bootstrap.NewApp(
 		log,
 		pool,
-		cacheConn,
 		minioConn,
-		messageSendUC,
-		srv,
+		grpcServer,
+		httpGateway,
 	)
 
-	if err := app.Run(ctx); err != nil {
+	if err = app.Run(ctx); err != nil {
 		log.Error("App exited with error", "error", err.Error())
 		os.Exit(1)
 	}

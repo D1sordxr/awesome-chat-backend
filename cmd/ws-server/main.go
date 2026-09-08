@@ -16,9 +16,9 @@ import (
 	"awesome-chat/internal/infrastructure/ws/chathub"
 	"awesome-chat/internal/infrastructure/ws/chathub/transport"
 	"awesome-chat/internal/infrastructure/ws/chathub/transport/sendMessage"
-	ginServer "awesome-chat/internal/presentation/httpGin"
-	"awesome-chat/internal/presentation/httpGin/delivery/handlers/ws"
-	"awesome-chat/internal/presentation/httpGin/middleware"
+	ginServer "awesome-chat/internal/transport/httpgin"
+	"awesome-chat/internal/transport/httpgin/handler/ws"
+	"awesome-chat/internal/transport/httpgin/middleware"
 )
 
 func main() {
