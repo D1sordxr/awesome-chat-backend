@@ -1,5 +1,13 @@
 package wsserverapi
 
+import "awesome-chat/internal/infrastructure/config/env"
+
 type Config struct {
-	BroadcastURL string `yaml:"broadcast_url" env:"WS_SERVER_BROADCAST_URL" env-required:"true"`
+	BroadcastURL string
+}
+
+func NewConfig(l *env.Loader) Config {
+	return Config{
+		BroadcastURL: l.String("WS_SERVER_BROADCAST_URL"),
+	}
 }

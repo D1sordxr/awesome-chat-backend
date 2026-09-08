@@ -14,13 +14,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/service
 
 FROM scratch
 
-ARG SERVICE
-
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=build /out/service /service
-COPY configs/${SERVICE} /configs/${SERVICE}
-
-ENV CONFIG_PATH=/configs/${SERVICE}/prod.yaml
 
 USER 65532:65532
 

@@ -1,9 +1,21 @@
 package http
 
-import "time"
+import (
+	"time"
+
+	"awesome-chat/internal/infrastructure/config/env"
+)
 
 type Config struct {
-	Port        string        `yaml:"port" env:"HTTP_PORT" env-required:"true"`
-	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
-	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
+	Port        string
+	Timeout     time.Duration
+	IdleTimeout time.Duration
+}
+
+func NewConfig(l *env.Loader) Config {
+	return Config{
+		Port:        l.String("HTTP_PORT"),
+		Timeout:     l.DurationDefault("HTTP_TIMEOUT", 4*time.Second),
+		IdleTimeout: l.DurationDefault("HTTP_IDLE_TIMEOUT", 30*time.Second),
+	}
 }

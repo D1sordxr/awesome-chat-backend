@@ -1,10 +1,13 @@
-SERVICES = api ws-server worker outbox-processor topic-creator
+SERVICES = api ws-server worker outbox-processor topic-creator broadcaster migrate
 IMAGE_TAG ?= dev
 
-.PHONY: run build-go vet test lint check images
+.PHONY: run run-ws-server build-go vet test lint check images
 
 run:
-	go run ./cmd/api
+	set -a && . ./local.env && set +a && go run ./cmd/api
+
+run-ws-server:
+	set -a && . ./local.env && set +a && HTTP_PORT=8081 go run ./cmd/ws-server
 
 build-go:
 	go build ./...

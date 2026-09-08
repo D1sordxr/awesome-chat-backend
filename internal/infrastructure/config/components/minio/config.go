@@ -1,8 +1,19 @@
 package minio
 
+import "awesome-chat/internal/infrastructure/config/env"
+
 type Config struct {
-	Endpoint  string `yaml:"endpoint" env:"MINIO_ENDPOINT" env-required:"true"`
-	AccessKey string `yaml:"access_key" env:"MINIO_ACCESS_KEY" env-required:"true"`
-	SecretKey string `yaml:"secret_key" env:"MINIO_SECRET_KEY" env-required:"true"`
-	UseSSL    bool   `yaml:"use_ssl" env:"MINIO_USE_SSL"`
+	Endpoint  string
+	AccessKey string
+	SecretKey string
+	UseSSL    bool
+}
+
+func NewConfig(l *env.Loader) Config {
+	return Config{
+		Endpoint:  l.String("MINIO_ENDPOINT"),
+		AccessKey: l.String("MINIO_ACCESS_KEY"),
+		SecretKey: l.String("MINIO_SECRET_KEY"),
+		UseSSL:    l.BoolDefault("MINIO_USE_SSL", false),
+	}
 }

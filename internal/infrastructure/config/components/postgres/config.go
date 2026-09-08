@@ -1,13 +1,27 @@
 package postgres
 
-import "fmt"
+import (
+	"fmt"
+
+	"awesome-chat/internal/infrastructure/config/env"
+)
 
 type Config struct {
-	Host     string `yaml:"host" env:"POSTGRES_HOST" env-required:"true"`
-	Port     int    `yaml:"port" env:"POSTGRES_PORT" env-required:"true"`
-	Database string `yaml:"database" env:"POSTGRES_DB" env-required:"true"`
-	User     string `yaml:"user" env:"POSTGRES_USER" env-required:"true"`
-	Password string `yaml:"password" env:"POSTGRES_PASSWORD" env-required:"true"`
+	Host     string
+	Port     int
+	Database string
+	User     string
+	Password string
+}
+
+func NewConfig(l *env.Loader) Config {
+	return Config{
+		Host:     l.String("POSTGRES_HOST"),
+		Port:     l.Int("POSTGRES_PORT"),
+		Database: l.String("POSTGRES_DB"),
+		User:     l.String("POSTGRES_USER"),
+		Password: l.String("POSTGRES_PASSWORD"),
+	}
 }
 
 func (c *Config) ConnectionString() string {

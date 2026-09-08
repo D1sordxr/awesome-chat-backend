@@ -1,7 +1,17 @@
 package redis
 
+import "awesome-chat/internal/infrastructure/config/env"
+
 type Config struct {
-	ClientAddress string `yaml:"client_address" env:"REDIS_ADDRESS" env-required:"true"`
-	Password      string `yaml:"password" env:"REDIS_PASSWORD"`
-	Channel       string `yaml:"channel" env:"REDIS_CHANNEL"`
+	ClientAddress string
+	Password      string
+	Channel       string
+}
+
+func NewConfig(l *env.Loader) Config {
+	return Config{
+		ClientAddress: l.String("REDIS_ADDRESS"),
+		Password:      l.StringDefault("REDIS_PASSWORD", ""),
+		Channel:       l.StringDefault("REDIS_CHANNEL", ""),
+	}
 }

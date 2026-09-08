@@ -3,4 +3,3 @@
 Dockerfile
 .dockerignore
 *_test.go
-migrations

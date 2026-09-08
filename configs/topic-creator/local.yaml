@@ -1,4 +1,0 @@
-broker:
-  brokers:
-    - "localhost:9092"
-  topic: "awesome-chat-message"
