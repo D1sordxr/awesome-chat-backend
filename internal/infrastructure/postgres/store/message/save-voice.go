@@ -42,8 +42,8 @@ func (s *SaveVoiceStore) Execute(ctx context.Context, data vo.SaveVoiceData) err
 	voiceQuery := `
 		INSERT INTO voice_messages (
 			message_id,
-			audio_url,
-			duration,
+			object_key,
+			duration_seconds,
 			waveform
 		) VALUES ($1, $2, $3, $4)
 	`

@@ -32,8 +32,7 @@ func (s *Store) GetMessagesForUpdate(ctx context.Context, filter filters.GetOutb
 		id, 
 		entity_name,
 		status, 
-		payload, 
-		created_at
+		payload
 	FROM outbox
 	WHERE status = $1 AND entity_name = $2
 	ORDER BY created_at ASC

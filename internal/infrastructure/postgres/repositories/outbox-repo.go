@@ -19,16 +19,18 @@ func (r *OutboxRepo) Save(ctx context.Context, outbox entity.Outbox) error {
 	query := `
 		INSERT INTO outbox (
 			id,
-			payload,
-			status
-		) VALUES ($1, $2, $3)`
+			entity_name,
+			status,
+			payload
+		) VALUES ($1, $2, $3, $4)`
 
 	if _, err := executor.Exec(
 		ctx,
 		query,
 		outbox.OutboxID,
-		outbox.Payload,
+		outbox.EntityName,
 		outbox.Status,
+		outbox.Payload,
 	); err != nil {
 		return err
 	}

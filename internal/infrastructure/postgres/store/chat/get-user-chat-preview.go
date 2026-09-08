@@ -59,7 +59,7 @@ func (s *GetUserChatPreviewStore) SetupChatPreviews(
 			cp          entity.ChatPreview
 			msgText     pgtype.Text
 			msgSenderID pgtype.UUID
-			msgTime     pgtype.Timestamp
+			msgTime     pgtype.Timestamptz
 		)
 
 		if err = rows.Scan(
