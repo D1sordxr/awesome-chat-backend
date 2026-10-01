@@ -1,13 +1,14 @@
 package interceptor
 
 import (
-	"awesome-chat/internal/transport/grpc/errors"
 	"context"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 
 	"awesome-chat/internal/domain/app/ports"
+	"awesome-chat/internal/transport/grpc/errors"
+	"awesome-chat/internal/transport/grpc/logfields"
 )
 
 type Error struct {
@@ -32,11 +33,13 @@ func (e *Error) Unary() grpc.UnaryServerInterceptor {
 
 		mapped := errors.MapError(err)
 
-		logByCode(e.log, status.Code(mapped), "Request error",
+		code := status.Code(mapped)
+
+		logByCode(e.log, code, "Request error", append(logfields.From(ctx),
 			"method", info.FullMethod,
-			"code", status.Code(mapped).String(),
+			"code", code.String(),
 			"error", err.Error(),
-		)
+		)...)
 
 		return nil, mapped
 	}

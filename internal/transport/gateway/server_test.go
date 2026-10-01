@@ -295,3 +295,99 @@ func TestRegisterRejectsInvalidEmail(t *testing.T) {
 		t.Error("violation has no rule id")
 	}
 }
+
+func TestRequestIDIsEchoedBack(t *testing.T) {
+	t.Parallel()
+
+	server, _ := newGateway(t)
+
+	req, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		server.URL+"/v1/auth/logout",
+		strings.NewReader(`{}`),
+	)
+	if err != nil {
+		t.Fatalf("build request: %v", err)
+	}
+	req.Header.Set("X-Request-Id", "req-from-client")
+
+	resp, err := server.Client().Do(req)
+	if err != nil {
+		t.Fatalf("logout request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if got := resp.Header.Get("X-Request-Id"); got != "req-from-client" {
+		t.Errorf("X-Request-Id = %q, want %q", got, "req-from-client")
+	}
+
+	if values := resp.Header.Values("X-Request-Id"); len(values) != 1 {
+		t.Errorf("X-Request-Id set %d times, want 1: %v", len(values), values)
+	}
+}
+
+func TestRequestIDIsGeneratedWhenMissing(t *testing.T) {
+	t.Parallel()
+
+	server, _ := newGateway(t)
+
+	resp, err := server.Client().Post(server.URL+"/v1/auth/logout", "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatalf("logout request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	requestID := resp.Header.Get("X-Request-Id")
+	if requestID == "" {
+		t.Fatal("X-Request-Id is missing")
+	}
+
+	if _, err = uuid.Parse(requestID); err != nil {
+		t.Errorf("X-Request-Id = %q, want a uuid", requestID)
+	}
+}
+
+func TestUnknownRouteIsAnsweredWithRequestID(t *testing.T) {
+	t.Parallel()
+
+	server, _ := newGateway(t)
+
+	resp, err := server.Client().Get(server.URL + "/v1/does-not-exist")
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusNotFound)
+	}
+
+	if resp.Header.Get("X-Request-Id") == "" {
+		t.Error("X-Request-Id is missing on a request that never reached gRPC")
+	}
+}
+
+func TestMalformedBodyNeverReachesUseCase(t *testing.T) {
+	t.Parallel()
+
+	server, _ := newGateway(t)
+
+	resp, err := server.Client().Post(
+		server.URL+"/v1/auth/login",
+		"application/json",
+		strings.NewReader(`{"email":`),
+	)
+	if err != nil {
+		t.Fatalf("login request: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
+	}
+
+	if resp.Header.Get("X-Request-Id") == "" {
+		t.Error("X-Request-Id is missing on a malformed request")
+	}
+}

@@ -56,7 +56,7 @@ func NewServer(
 		mux:  mux,
 		server: &http.Server{
 			Addr:              ":" + cfg.Port,
-			Handler:           withCORS(mux, opts.AllowedOrigins),
+			Handler:           withLogging(withCORS(mux, opts.AllowedOrigins), log),
 			ReadHeaderTimeout: cfg.Timeout,
 			ReadTimeout:       cfg.Timeout,
 			WriteTimeout:      cfg.Timeout,

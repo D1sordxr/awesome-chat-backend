@@ -4,12 +4,17 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"awesome-chat/internal/domain/app/ports"
+	"awesome-chat/internal/transport/grpc/logfields"
 )
+
+const RequestIDKey = "x-request-id"
 
 type Logger struct {
 	log ports.Logger
@@ -28,16 +33,34 @@ func (l *Logger) Unary() grpc.UnaryServerInterceptor {
 	) (any, error) {
 		started := time.Now()
 
+		requestID := requestID(ctx)
+		ctx = logfields.Inject(ctx, "request_id", requestID)
+
+		_ = grpc.SetHeader(ctx, metadata.Pairs(RequestIDKey, requestID))
+
 		resp, err := handler(ctx, req)
 
-		logByCode(l.log, status.Code(err), "Request handled",
+		code := status.Code(err)
+
+		logByCode(l.log, code, "Request handled", append(logfields.From(ctx),
 			"method", info.FullMethod,
-			"code", status.Code(err).String(),
+			"code", code.String(),
 			"duration", time.Since(started).String(),
-		)
+		)...)
 
 		return resp, err
 	}
+}
+
+func requestID(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		if values := md.Get(RequestIDKey); len(values) > 0 && values[0] != "" {
+			return values[0]
+		}
+	}
+
+	return uuid.NewString()
 }
 
 func logByCode(log ports.Logger, code codes.Code, msg string, fields ...any) {
