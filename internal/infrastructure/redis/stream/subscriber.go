@@ -1,18 +1,18 @@
 package stream
 
 import (
-	appPorts "awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/domain/core/message/ports/worker"
 	conn "awesome-chat/internal/infrastructure/redis"
 	"context"
 	"errors"
 	"github.com/redis/go-redis/v9"
+	"log/slog"
 	"strings"
 	"time"
 )
 
 type SubscriberImpl struct {
-	log appPorts.Logger
+	log *slog.Logger
 
 	client     *conn.Connection
 	streamName string
@@ -24,7 +24,7 @@ type SubscriberImpl struct {
 }
 
 func NewSubscriberImpl(
-	log appPorts.Logger,
+	log *slog.Logger,
 	conn *conn.Connection,
 	streamPipe worker.MessagePipe[redis.XMessage],
 	streamName string,

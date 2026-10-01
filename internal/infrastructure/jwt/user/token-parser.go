@@ -1,19 +1,19 @@
 package user
 
 import (
-	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/domain/core/user/vo"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"log/slog"
 )
 
 type TokenParserImpl struct {
-	log       ports.Logger
+	log       *slog.Logger
 	secretKey string
 }
 
 func NewTokenParser(
-	log ports.Logger,
+	log *slog.Logger,
 	secretKey string,
 ) *TokenParserImpl {
 	return &TokenParserImpl{

@@ -2,25 +2,24 @@ package interceptor
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
+	logging "github.com/D1sordxr/packages/log"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-
-	"awesome-chat/internal/domain/app/ports"
-	"awesome-chat/internal/transport/grpc/logfields"
 )
 
 const RequestIDKey = "x-request-id"
 
 type Logger struct {
-	log ports.Logger
+	log *slog.Logger
 }
 
-func NewLogger(log ports.Logger) *Logger {
+func NewLogger(log *slog.Logger) *Logger {
 	return &Logger{log: log}
 }
 
@@ -34,7 +33,7 @@ func (l *Logger) Unary() grpc.UnaryServerInterceptor {
 		started := time.Now()
 
 		requestID := requestID(ctx)
-		ctx = logfields.Inject(ctx, "request_id", requestID)
+		ctx = logging.Inject(ctx, "request_id", requestID)
 
 		_ = grpc.SetHeader(ctx, metadata.Pairs(RequestIDKey, requestID))
 
@@ -42,11 +41,11 @@ func (l *Logger) Unary() grpc.UnaryServerInterceptor {
 
 		code := status.Code(err)
 
-		logByCode(l.log, code, "Request handled", append(logfields.From(ctx),
+		logByCode(ctx, l.log, code, "Request handled",
 			"method", info.FullMethod,
 			"code", code.String(),
 			"duration", time.Since(started).String(),
-		)...)
+		)
 
 		return resp, err
 	}
@@ -63,13 +62,15 @@ func requestID(ctx context.Context) string {
 	return uuid.NewString()
 }
 
-func logByCode(log ports.Logger, code codes.Code, msg string, fields ...any) {
+func logByCode(ctx context.Context, log *slog.Logger, code codes.Code, msg string, fields ...any) {
+	level := slog.LevelWarn
+
 	switch code {
 	case codes.OK:
-		log.Info(msg, fields...)
+		level = slog.LevelInfo
 	case codes.Internal, codes.Unknown, codes.DataLoss, codes.Unavailable:
-		log.Error(msg, fields...)
-	default:
-		log.Warn(msg, fields...)
+		level = slog.LevelError
 	}
+
+	log.Log(ctx, level, msg, fields...)
 }

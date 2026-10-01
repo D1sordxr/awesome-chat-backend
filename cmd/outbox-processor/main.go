@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
+
+	logging "github.com/D1sordxr/packages/log"
 
 	"awesome-chat/internal/application/outbox/useCases/process"
 	"awesome-chat/internal/bootstrap"
@@ -12,7 +15,6 @@ import (
 	"awesome-chat/internal/domain/core/shared/outbox/vo"
 	config "awesome-chat/internal/infrastructure/config/apps/outboxprocessor"
 	"awesome-chat/internal/infrastructure/kafka"
-	"awesome-chat/internal/infrastructure/logger"
 	"awesome-chat/internal/infrastructure/postgres"
 	"awesome-chat/internal/infrastructure/postgres/executor"
 	outboxStores "awesome-chat/internal/infrastructure/postgres/store/outbox"
@@ -26,11 +28,15 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	log := logger.NewLogger()
-
 	cfg, err := config.NewConfig()
 	if err != nil {
-		log.Error("Failed to load config", "error", err.Error())
+		slog.Error("Failed to load config", "error", err.Error())
+		os.Exit(1)
+	}
+
+	log, err := logging.New(cfg.Log, os.Stdout)
+	if err != nil {
+		slog.Error("Failed to build logger", "error", err.Error())
 		os.Exit(1)
 	}
 

@@ -2,24 +2,24 @@ package broadcast
 
 import (
 	"awesome-chat/internal/application/message/dto"
-	appPorts "awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/domain/core/message/vo"
 	"awesome-chat/internal/domain/core/shared/ports"
 	"awesome-chat/internal/domain/core/shared/ports/ws"
 	"awesome-chat/internal/infrastructure/ws/chathub"
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
 type MessageBroadcastWithPubImpl struct {
-	log appPorts.Logger
+	log *slog.Logger
 	pub ports.StreamPublisher
 	br  ws.MessageBroadcaster
 }
 
 func NewMessageBroadcastWithPubImpl(
-	log appPorts.Logger,
+	log *slog.Logger,
 	pub ports.StreamPublisher,
 	br ws.MessageBroadcaster,
 ) *MessageBroadcastWithPubImpl {

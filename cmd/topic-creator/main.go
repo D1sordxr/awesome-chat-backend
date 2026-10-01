@@ -1,19 +1,25 @@
 package main
 
 import (
+	"log/slog"
 	"os"
+
+	logging "github.com/D1sordxr/packages/log"
 
 	config "awesome-chat/internal/infrastructure/config/apps/topiccreator"
 	"awesome-chat/internal/infrastructure/kafka"
-	"awesome-chat/internal/infrastructure/logger"
 )
 
 func main() {
-	log := logger.NewLogger()
-
 	cfg, err := config.NewConfig()
 	if err != nil {
-		log.Error("Failed to load config", "error", err.Error())
+		slog.Error("Failed to load config", "error", err.Error())
+		os.Exit(1)
+	}
+
+	log, err := logging.New(cfg.Log, os.Stdout)
+	if err != nil {
+		slog.Error("Failed to build logger", "error", err.Error())
 		os.Exit(1)
 	}
 

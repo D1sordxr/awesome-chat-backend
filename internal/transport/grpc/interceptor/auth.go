@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	logging "github.com/D1sordxr/packages/log"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -14,7 +15,6 @@ import (
 
 	"awesome-chat/internal/domain/core/user/vo"
 	"awesome-chat/internal/transport/grpc/identity"
-	"awesome-chat/internal/transport/grpc/logfields"
 )
 
 //go:generate mockgen -source=auth.go -destination=mocks/interceptors_mocks.go -package=mocks
@@ -64,7 +64,7 @@ func (a *Auth) Unary() grpc.UnaryServerInterceptor {
 			return nil, err
 		}
 
-		logfields.Set(ctx, "user_id", caller.UserID.String())
+		logging.Add(ctx, "user_id", caller.UserID.String())
 
 		return handler(identity.With(ctx, caller), req)
 	}

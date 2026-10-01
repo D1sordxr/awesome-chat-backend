@@ -3,11 +3,14 @@ package api
 import (
 	"fmt"
 
+	"github.com/D1sordxr/packages/log"
+
 	"awesome-chat/internal/infrastructure/config/apps"
 	"awesome-chat/internal/infrastructure/config/components/cookie"
 	"awesome-chat/internal/infrastructure/config/components/grpcserver"
 	"awesome-chat/internal/infrastructure/config/components/http"
 	"awesome-chat/internal/infrastructure/config/components/jwt"
+	"awesome-chat/internal/infrastructure/config/components/logger"
 	"awesome-chat/internal/infrastructure/config/components/minio"
 	"awesome-chat/internal/infrastructure/config/components/postgres"
 	"awesome-chat/internal/infrastructure/config/env"
@@ -15,6 +18,7 @@ import (
 
 type Config struct {
 	Env        apps.AppEnv
+	Log        log.Config
 	Storage    postgres.Config
 	MinIO      minio.Config
 	HTTPServer http.Config
@@ -29,6 +33,7 @@ func NewConfig() (*Config, error) {
 	l := env.NewLoader()
 
 	cfg := Config{
+		Log:        logger.NewConfig(l),
 		Storage:    postgres.NewConfig(l),
 		MinIO:      minio.NewConfig(l),
 		HTTPServer: http.NewConfig(l),

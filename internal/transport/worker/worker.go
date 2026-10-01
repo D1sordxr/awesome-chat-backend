@@ -1,10 +1,10 @@
 package worker
 
 import (
-	"awesome-chat/internal/domain/app/ports"
 	"context"
 	"fmt"
 	"golang.org/x/sync/errgroup"
+	"log/slog"
 	"sync/atomic"
 	"time"
 )
@@ -15,7 +15,7 @@ type Handler interface {
 }
 
 type Worker struct {
-	log      ports.Logger
+	log      *slog.Logger
 	handlers []Handler
 
 	errChan  chan error
@@ -23,7 +23,7 @@ type Worker struct {
 }
 
 func NewWorker(
-	log ports.Logger,
+	log *slog.Logger,
 	handlers ...Handler,
 ) *Worker {
 	return &Worker{

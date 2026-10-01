@@ -1,22 +1,22 @@
 package acknowledger
 
 import (
-	appPorts "awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/domain/core/message/ports/worker"
 	"awesome-chat/internal/domain/core/shared/ports"
 	"context"
+	"log/slog"
 	"time"
 )
 
 type Handler struct {
-	log          appPorts.Logger
+	log          *slog.Logger
 	readPipe     worker.MessagePipe[string]
 	acknowledger ports.Acknowledger
 	ackPipeTx    worker.AckPipeTx
 }
 
 func NewHandler(
-	log appPorts.Logger,
+	log *slog.Logger,
 	readPipe worker.MessagePipe[string],
 	acknowledger ports.Acknowledger,
 	ackPipeTx worker.AckPipeTx,

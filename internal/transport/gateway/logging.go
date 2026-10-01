@@ -1,12 +1,11 @@
 package gateway
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
-
-	"awesome-chat/internal/domain/app/ports"
 )
 
 type responseWriter struct {
@@ -32,7 +31,7 @@ func (w *responseWriter) Write(data []byte) (int, error) {
 	return w.ResponseWriter.Write(data)
 }
 
-func withLogging(next http.Handler, log ports.Logger) http.Handler {
+func withLogging(next http.Handler, log *slog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
 

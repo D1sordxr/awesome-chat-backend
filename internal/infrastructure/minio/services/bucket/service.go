@@ -3,20 +3,20 @@ package bucket
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/minio/minio-go/v7"
 
-	appPorts "awesome-chat/internal/domain/app/ports"
 	root "awesome-chat/internal/infrastructure/minio"
 )
 
 type Service struct {
-	log appPorts.Logger
+	log *slog.Logger
 	*root.Connection
 }
 
 func NewService(
-	log appPorts.Logger,
+	log *slog.Logger,
 	conn *root.Connection,
 ) *Service {
 	return &Service{log: log, Connection: conn}

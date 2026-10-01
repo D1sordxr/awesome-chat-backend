@@ -13,3 +13,6 @@ coverage.*
 CLAUDE.md
 minio/
 bin/
+
+go.work
+go.work.sum

@@ -3,14 +3,18 @@ package outboxprocessor
 import (
 	"fmt"
 
+	"github.com/D1sordxr/packages/log"
+
 	"awesome-chat/internal/infrastructure/config/apps"
 	"awesome-chat/internal/infrastructure/config/components/kafka"
+	"awesome-chat/internal/infrastructure/config/components/logger"
 	"awesome-chat/internal/infrastructure/config/components/postgres"
 	"awesome-chat/internal/infrastructure/config/env"
 )
 
 type Config struct {
 	Env           apps.AppEnv
+	Log           log.Config
 	Storage       postgres.Config
 	MessageBroker kafka.Config
 }
@@ -19,6 +23,7 @@ func NewConfig() (*Config, error) {
 	l := env.NewLoader()
 
 	cfg := Config{
+		Log:           logger.NewConfig(l),
 		Storage:       postgres.NewConfig(l),
 		MessageBroker: kafka.NewConfig(l),
 	}

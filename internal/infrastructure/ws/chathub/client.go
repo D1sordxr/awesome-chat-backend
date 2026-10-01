@@ -1,9 +1,9 @@
 package chathub
 
 import (
-	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/infrastructure/ws/chathub/consts"
 	"context"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -13,7 +13,7 @@ import (
 )
 
 type Client struct {
-	log ports.Logger
+	log *slog.Logger
 
 	id    string
 	chats []string
@@ -29,7 +29,7 @@ type Client struct {
 }
 
 func NewClient(
-	log ports.Logger,
+	log *slog.Logger,
 	socket *websocket.Conn,
 	id string,
 	opChan chan Operation,

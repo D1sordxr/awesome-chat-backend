@@ -1,21 +1,21 @@
 package subscriber
 
 import (
-	appPorts "awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/domain/core/message/ports/worker"
 	"awesome-chat/internal/domain/core/message/vo"
 	"context"
 	"github.com/redis/go-redis/v9"
+	"log/slog"
 )
 
 type Handler struct {
-	log        appPorts.Logger
+	log        *slog.Logger
 	subscriber worker.MessagePipe[redis.XMessage]
 	saverPipe  worker.MessagePipe[vo.StreamMessage]
 }
 
 func NewHandler(
-	log appPorts.Logger,
+	log *slog.Logger,
 	streamPipe worker.MessagePipe[redis.XMessage],
 	saver worker.MessagePipe[vo.StreamMessage],
 ) *Handler {

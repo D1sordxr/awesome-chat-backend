@@ -1,12 +1,12 @@
 package saver
 
 import (
-	appPorts "awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/domain/core/message/ports/store"
 	"awesome-chat/internal/domain/core/message/ports/worker"
 	"awesome-chat/internal/domain/core/message/vo"
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
@@ -16,7 +16,7 @@ const (
 )
 
 type Handler struct {
-	log           appPorts.Logger
+	log           *slog.Logger
 	ackWritePipe  worker.MessagePipe[string]
 	saverReadPipe worker.MessagePipe[vo.StreamMessage]
 	saverStore    store.SaveFromStreamStore
@@ -26,7 +26,7 @@ type Handler struct {
 }
 
 func NewHandler(
-	log appPorts.Logger,
+	log *slog.Logger,
 	ackPipe worker.MessagePipe[string],
 	saverPipe worker.MessagePipe[vo.StreamMessage],
 	saverStore store.SaveFromStreamStore,

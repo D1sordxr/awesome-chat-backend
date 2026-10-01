@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -25,12 +26,12 @@ func WithShutdownTimeout(d time.Duration) Option {
 }
 
 type App struct {
-	log             ports.Logger
+	log             *slog.Logger
 	components      []ports.Component
 	shutdownTimeout time.Duration
 }
 
-func NewApp(log ports.Logger, components ...ports.Component) *App {
+func NewApp(log *slog.Logger, components ...ports.Component) *App {
 	return &App{
 		log:             log,
 		components:      components,

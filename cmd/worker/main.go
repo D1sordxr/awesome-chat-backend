@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
+	logging "github.com/D1sordxr/packages/log"
+
 	"awesome-chat/internal/bootstrap"
 	"awesome-chat/internal/domain/core/message/vo"
 	workerCfg "awesome-chat/internal/infrastructure/config/apps/worker"
-	"awesome-chat/internal/infrastructure/logger"
 	"awesome-chat/internal/infrastructure/messagePipe"
 	"awesome-chat/internal/infrastructure/postgres"
 	"awesome-chat/internal/infrastructure/postgres/executor"
@@ -29,11 +31,15 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	log := logger.NewLogger()
-
 	cfg, err := workerCfg.NewConfig()
 	if err != nil {
-		log.Error("Failed to load config", "error", err.Error())
+		slog.Error("Failed to load config", "error", err.Error())
+		os.Exit(1)
+	}
+
+	log, err := logging.New(cfg.Log, os.Stdout)
+	if err != nil {
+		slog.Error("Failed to build logger", "error", err.Error())
 		os.Exit(1)
 	}
 

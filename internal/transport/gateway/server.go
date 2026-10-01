@@ -3,12 +3,12 @@ package gateway
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 
-	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/infrastructure/config/components/cookie"
 	httpCfg "awesome-chat/internal/infrastructure/config/components/http"
 )
@@ -21,7 +21,7 @@ type Options struct {
 }
 
 type Server struct {
-	log        ports.Logger
+	log        *slog.Logger
 	conn       *grpc.ClientConn
 	mux        *runtime.ServeMux
 	server     *http.Server
@@ -30,7 +30,7 @@ type Server struct {
 
 func NewServer(
 	ctx context.Context,
-	log ports.Logger,
+	log *slog.Logger,
 	cfg *httpCfg.Config,
 	opts Options,
 	conn *grpc.ClientConn,

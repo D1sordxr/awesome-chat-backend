@@ -3,7 +3,10 @@ package worker
 import (
 	"fmt"
 
+	"github.com/D1sordxr/packages/log"
+
 	"awesome-chat/internal/infrastructure/config/apps"
+	"awesome-chat/internal/infrastructure/config/components/logger"
 	"awesome-chat/internal/infrastructure/config/components/postgres"
 	"awesome-chat/internal/infrastructure/config/components/redis"
 	"awesome-chat/internal/infrastructure/config/env"
@@ -11,6 +14,7 @@ import (
 
 type Config struct {
 	Env              apps.AppEnv
+	Log              log.Config
 	Storage          postgres.Config
 	StreamSubscriber redis.Config
 }
@@ -19,6 +23,7 @@ func NewConfig() (*Config, error) {
 	l := env.NewLoader()
 
 	cfg := Config{
+		Log:              logger.NewConfig(l),
 		Storage:          postgres.NewConfig(l),
 		StreamSubscriber: redis.NewConfig(l),
 	}

@@ -1,19 +1,19 @@
 package chathub
 
 import (
-	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/infrastructure/ws/chathub/consts"
 	chathubErrors "awesome-chat/internal/infrastructure/ws/chathub/errors"
 	"context"
 	"errors"
 	"github.com/gorilla/websocket"
+	"log/slog"
 	"net/http"
 	"sync"
 	"sync/atomic"
 )
 
 type ClientManager struct {
-	log ports.Logger
+	log *slog.Logger
 
 	chatClients map[string]map[string]*Client
 	upgrader    *websocket.Upgrader
@@ -32,7 +32,7 @@ type ClientManager struct {
 }
 
 func NewClientManager(
-	log ports.Logger,
+	log *slog.Logger,
 ) *ClientManager {
 	return &ClientManager{
 		log:         log,

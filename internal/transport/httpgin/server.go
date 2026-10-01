@@ -1,11 +1,11 @@
 package httpgin
 
 import (
-	"awesome-chat/internal/domain/app/ports"
 	cfg "awesome-chat/internal/infrastructure/config/components/http"
 	"context"
 	"errors"
 	"github.com/gin-gonic/gin"
+	"log/slog"
 	"net/http"
 )
 
@@ -14,14 +14,14 @@ type Handler interface {
 }
 
 type Server struct {
-	log      ports.Logger
+	log      *slog.Logger
 	handlers []Handler
 	engine   *gin.Engine
 	server   *http.Server
 }
 
 func NewServer(
-	log ports.Logger,
+	log *slog.Logger,
 	config *cfg.Config,
 	handlers ...Handler,
 ) *Server {

@@ -1,10 +1,10 @@
 package message
 
 import (
-	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/domain/core/shared/broker/entity"
 	sharedPorts "awesome-chat/internal/domain/core/shared/ports"
 	"context"
+	"log/slog"
 	"time"
 )
 
@@ -19,14 +19,14 @@ type useCase interface {
 }
 
 type BroadcastMessage struct {
-	log      ports.Logger
+	log      *slog.Logger
 	uc       useCase
 	consumer sharedPorts.Consumer
 	ticker   *time.Ticker
 }
 
 func NewBroadcastMessage(
-	log ports.Logger,
+	log *slog.Logger,
 	consumer sharedPorts.Consumer,
 	uc useCase,
 ) *BroadcastMessage {

@@ -2,25 +2,25 @@ package grpc
 
 import (
 	"context"
+	"log/slog"
 	"net"
 
 	"google.golang.org/grpc"
 
-	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/infrastructure/config/components/grpcserver"
 )
 
 type Registrar func(server grpc.ServiceRegistrar)
 
 type Server struct {
-	log        ports.Logger
+	log        *slog.Logger
 	address    string
 	server     *grpc.Server
 	registrars []Registrar
 }
 
 func NewServer(
-	log ports.Logger,
+	log *slog.Logger,
 	cfg grpcserver.Config,
 	interceptors []grpc.UnaryServerInterceptor,
 	registrars ...Registrar,

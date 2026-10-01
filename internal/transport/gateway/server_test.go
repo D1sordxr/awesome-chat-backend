@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	logging "github.com/D1sordxr/packages/log"
 	"github.com/google/uuid"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
@@ -24,7 +25,6 @@ import (
 	userVO "awesome-chat/internal/domain/core/user/vo"
 	"awesome-chat/internal/infrastructure/config/components/cookie"
 	httpCfg "awesome-chat/internal/infrastructure/config/components/http"
-	"awesome-chat/internal/infrastructure/logger"
 	userHandler "awesome-chat/internal/transport/grpc/handler/user"
 	userMocks "awesome-chat/internal/transport/grpc/handler/user/mocks"
 	"awesome-chat/internal/transport/grpc/interceptor"
@@ -53,8 +53,8 @@ func newGateway(t *testing.T) (*httptest.Server, stubs) {
 	handler := userHandler.NewHandlerWithTracing(userHandler.NewHandler(s.useCase))
 
 	auth := interceptor.NewAuth(s.parser, interceptor.PublicMethods...)
-	grpcLogger := interceptor.NewLogger(logger.NewLogger())
-	grpcErrors := interceptor.NewError(logger.NewLogger())
+	grpcLogger := interceptor.NewLogger(logging.Discard())
+	grpcErrors := interceptor.NewError(logging.Discard())
 	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		grpcLogger.Unary(),
 		grpcErrors.Unary(),
@@ -78,7 +78,7 @@ func newGateway(t *testing.T) (*httptest.Server, stubs) {
 
 	gateway, err := NewServer(
 		context.Background(),
-		logger.NewLogger(),
+		logging.Discard(),
 		&httpCfg.Config{Port: "0", Timeout: time.Second, IdleTimeout: time.Second},
 		Options{
 			AllowedOrigins: []string{"http://localhost:3000"},

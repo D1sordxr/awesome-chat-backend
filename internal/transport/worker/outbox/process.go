@@ -1,9 +1,9 @@
 package outbox
 
 import (
-	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/domain/core/shared/outbox/filters"
 	"context"
+	"log/slog"
 	"time"
 )
 
@@ -15,13 +15,13 @@ type useCase interface {
 
 type ProcessHandler struct {
 	uc     useCase
-	log    ports.Logger
+	log    *slog.Logger
 	filter filters.GetOutbox
 	ticker *time.Ticker
 }
 
 func NewHandler(
-	log ports.Logger,
+	log *slog.Logger,
 	uc useCase,
 	filter filters.GetOutbox,
 ) *ProcessHandler {

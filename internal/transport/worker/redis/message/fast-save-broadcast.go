@@ -1,9 +1,9 @@
 package message
 
 import (
-	appPorts "awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/domain/core/shared/ports"
 	"context"
+	"log/slog"
 	"sync"
 )
 
@@ -17,7 +17,7 @@ type useCase interface {
 }
 
 type FastSaveAndBroadcastMessageHandler struct {
-	log      appPorts.Logger
+	log      *slog.Logger
 	sub      ports.Subscriber
 	uc       useCase
 	msgChan  chan []byte
@@ -26,7 +26,7 @@ type FastSaveAndBroadcastMessageHandler struct {
 }
 
 func NewFastSaveAndBroadcastMessageHandler(
-	log appPorts.Logger,
+	log *slog.Logger,
 	sub ports.Subscriber,
 	uc useCase,
 ) *FastSaveAndBroadcastMessageHandler {

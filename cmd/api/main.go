@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
+	logging "github.com/D1sordxr/packages/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -17,7 +19,6 @@ import (
 	"awesome-chat/internal/bootstrap"
 	"awesome-chat/internal/infrastructure/config/apps/api"
 	jwtUser "awesome-chat/internal/infrastructure/jwt/user"
-	"awesome-chat/internal/infrastructure/logger"
 	"awesome-chat/internal/infrastructure/minio"
 	"awesome-chat/internal/infrastructure/minio/services/bucket"
 	"awesome-chat/internal/infrastructure/minio/services/upload"
@@ -39,11 +40,15 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	log := logger.NewLogger()
-
 	cfg, err := api.NewConfig()
 	if err != nil {
-		log.Error("Failed to load config", "error", err.Error())
+		slog.Error("Failed to load config", "error", err.Error())
+		os.Exit(1)
+	}
+
+	log, err := logging.New(cfg.Log, os.Stdout)
+	if err != nil {
+		slog.Error("Failed to build logger", "error", err.Error())
 		os.Exit(1)
 	}
 

@@ -1,13 +1,13 @@
 package transport
 
 import (
-	"awesome-chat/internal/domain/app/ports"
 	"awesome-chat/internal/infrastructure/ws/chathub"
 	"awesome-chat/internal/infrastructure/ws/chathub/consts"
 	"awesome-chat/internal/infrastructure/ws/chathub/errors"
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 )
 
 type (
@@ -17,13 +17,13 @@ type (
 	}
 	HandlerStore     map[consts.OperationType]Handler
 	OperationHandler struct {
-		log          ports.Logger
+		log          *slog.Logger
 		handlerStore HandlerStore
 	}
 )
 
 func NewOperationHandler(
-	log ports.Logger,
+	log *slog.Logger,
 	handlers ...Handler,
 ) *OperationHandler {
 	validHandlers := make(map[consts.OperationType]Handler, len(handlers))

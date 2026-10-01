@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	logging "github.com/D1sordxr/packages/log"
 	_ "github.com/jackc/pgx/v5/stdlib"
 
+	"awesome-chat/internal/infrastructure/config/components/logger"
 	"awesome-chat/internal/infrastructure/config/components/postgres"
 	"awesome-chat/internal/infrastructure/config/env"
-	"awesome-chat/internal/infrastructure/logger"
 	"awesome-chat/migrations"
 )
 
@@ -25,13 +27,18 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	log := logger.NewLogger()
-
 	loader := env.NewLoader()
 	cfg := postgres.NewConfig(loader)
+	logCfg := logger.NewConfig(loader)
 
 	if err := loader.Err(); err != nil {
-		log.Error("Failed to load config", "error", err.Error())
+		slog.Error("Failed to load config", "error", err.Error())
+		os.Exit(1)
+	}
+
+	log, err := logging.New(logCfg, os.Stdout)
+	if err != nil {
+		slog.Error("Failed to build logger", "error", err.Error())
 		os.Exit(1)
 	}
 
