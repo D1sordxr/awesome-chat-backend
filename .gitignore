@@ -10,5 +10,6 @@
 coverage.*
 
 .idea/
+CLAUDE.md
 minio/
 bin/
